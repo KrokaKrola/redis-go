@@ -9,7 +9,7 @@ import (
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	conn.Write([]byte("+PING\r\n"))
+	conn.Write([]byte("+PONG\r\n"))
 }
 
 func main() {
