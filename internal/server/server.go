@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/logger"
+	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 )
 
 type RedisServer struct {
@@ -79,12 +80,23 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 			log.Fatal("error while reading connection happened: ", err)
 		}
 
-		log.Printf("read %d bytes from conn\n", n)
-
 		if n == 0 {
 			continue
 		}
 
-		conn.Write([]byte("+PONG\r\n"))
+		parser := resp.NewParser(buf)
+		resp, err := parser.Parse()
+
+		if err != nil {
+			conn.Write([]byte("Invalid input data\r\n"))
+			continue
+		}
+
+		err = processRespCommand(conn, resp)
+
+		if err != nil {
+			conn.Write([]byte("Something happend during processing RESP command\r\n"))
+			continue
+		}
 	}
 }
