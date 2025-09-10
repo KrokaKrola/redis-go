@@ -3,6 +3,7 @@ package resp
 import (
 	"bufio"
 	"fmt"
+	"strconv"
 )
 
 type Decoder struct {
@@ -52,14 +53,127 @@ func (d *Decoder) Read() (Value, error) {
 	}
 }
 
+func (d *Decoder) getSizeOfTheData() (int, error) {
+	var sizeStr []byte
+
+	for {
+		pBytes, err := d.r.Peek(1)
+
+		if err != nil {
+			return 0, err
+		}
+
+		if pBytes[0] == '\r' {
+			break
+		}
+
+		rByte, err := d.r.ReadByte()
+
+		if err != nil {
+			return 0, err
+		}
+
+		sizeStr = append(sizeStr, rByte)
+	}
+
+	num, err := strconv.Atoi(string(sizeStr))
+
+	if err != nil {
+		return 0, err
+	}
+
+	return num, nil
+}
+
+func (d *Decoder) readClrf() error {
+	_, err := d.r.Discard(2)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d *Decoder) processSimpleString() (*SimpleString, error) {
-	return nil, nil
+	str := &SimpleString{}
+
+	for {
+		pBytes, err := d.r.Peek(1)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if pBytes[0] == '\r' {
+			break
+		}
+
+		rByte, err := d.r.ReadByte()
+
+		if err != nil {
+			return nil, err
+		}
+
+		str.S = append(str.S, rByte)
+	}
+
+	d.readClrf()
+
+	return str, nil
 }
 
 func (d *Decoder) processArray() (*Array, error) {
-	return nil, nil
+	arrSize, err := d.getSizeOfTheData()
+
+	if err != nil {
+		return nil, err
+	}
+
+	d.readClrf()
+
+	arr := &Array{}
+
+	if arrSize == 0 {
+		arr.Null = true
+		return arr, nil
+	}
+
+	for arrSize > len(arr.Elems) {
+		el, err := d.Read()
+		if err != nil {
+			return nil, err
+		}
+
+		arr.Elems = append(arr.Elems, el)
+	}
+
+	d.readClrf()
+
+	return arr, nil
 }
 
 func (d *Decoder) processBulkString() (*BulkString, error) {
-	return nil, nil
+	strSize, err := d.getSizeOfTheData()
+
+	if err != nil {
+		return nil, err
+	}
+
+	d.readClrf()
+
+	str := &BulkString{}
+
+	for len(str.B) < strSize {
+		b, err := d.r.ReadByte()
+		if err != nil {
+			return nil, err
+		}
+
+		str.B = append(str.B, b)
+	}
+
+	d.readClrf()
+
+	return str, nil
 }

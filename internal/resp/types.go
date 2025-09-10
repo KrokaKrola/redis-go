@@ -5,7 +5,7 @@ type Value interface {
 }
 
 type SimpleString struct {
-	S string
+	S []byte
 }
 
 func (s SimpleString) isValue() {}
