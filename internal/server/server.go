@@ -1,15 +1,16 @@
 package server
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/codecrafters-io/redis-starter-go/internal/commands"
 	"github.com/codecrafters-io/redis-starter-go/internal/logger"
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 )
@@ -64,39 +65,35 @@ func (r *RedisServer) acceptConnections() {
 
 func (r *RedisServer) handleConnection(conn net.Conn) {
 	defer conn.Close()
-	log.Println("accepted new connection")
+	logger.Info("accepted new connection")
+	reader := bufio.NewReader(conn)
+	writer := bufio.NewWriter(conn)
+	decoder := resp.NewDecoder(reader)
+	encoder := resp.NewEncoder(writer)
+	defer writer.Flush()
 
-	buf := make([]byte, 1024)
 	for {
-		n, err := conn.Read(buf)
+		value, derr := decoder.Read()
 
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				log.Println("EOF of the conn")
-
+		if derr != nil {
+			if errors.Is(derr, io.EOF) {
 				break
 			}
 
-			log.Fatal("error while reading connection happened: ", err)
-		}
-
-		if n == 0 {
+			encoder.Write(resp.Error{Msg: "ERR protocol error"})
+			writer.Flush()
 			continue
 		}
 
-		parser := resp.NewParser(buf)
-		resp, err := parser.Parse()
+		cmd, perr := commands.Parse(value)
 
-		if err != nil {
-			conn.Write([]byte("Invalid input data\r\n"))
-			continue
+		if perr != nil {
+			encoder.Write(perr)
+		} else {
+			out := commands.Dispatch(cmd)
+			encoder.Write(out)
 		}
 
-		err = processRespCommand(conn, resp)
-
-		if err != nil {
-			conn.Write([]byte("Something happend during processing RESP command\r\n"))
-			continue
-		}
+		writer.Flush()
 	}
 }
