@@ -1,6 +1,9 @@
 package resp
 
-import "io"
+import (
+	"fmt"
+	"io"
+)
 
 type Encoder struct {
 	w io.Writer
@@ -13,5 +16,11 @@ func NewEncoder(writer io.Writer) *Encoder {
 }
 
 func (e *Encoder) Write(v Value) error {
-	return nil
+	switch v := v.(type) {
+	case SimpleString:
+		fmt.Fprintf(e.w, "+%s\r\n", v.S)
+		return nil
+	default:
+		return fmt.Errorf("unknown value type")
+	}
 }
