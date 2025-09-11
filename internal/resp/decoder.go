@@ -136,10 +136,15 @@ func (d *Decoder) processArray() (*Array, error) {
 		return nil, err
 	}
 
+	if arrSize < 0 {
+		return &Array{
+			Null: true,
+		}, nil
+	}
+
 	arr := &Array{}
 
 	if arrSize == 0 {
-		arr.Null = true
 		return arr, nil
 	}
 
@@ -160,6 +165,12 @@ func (d *Decoder) processBulkString() (*BulkString, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if strSize == -1 {
+		return &BulkString{
+			Null: true,
+		}, nil
 	}
 
 	if err := d.readClrf(); err != nil {

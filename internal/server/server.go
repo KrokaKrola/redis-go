@@ -80,7 +80,7 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 				break
 			}
 
-			encoder.Write(resp.Error{Msg: "ERR protocol error"})
+			encoder.Write(&resp.Error{Msg: "ERR protocol error"})
 			writer.Flush()
 			continue
 		}

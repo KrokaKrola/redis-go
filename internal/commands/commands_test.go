@@ -10,7 +10,7 @@ import (
 // with a bulk-string command name "PING" and no arguments.
 func TestParse_PING_BulkString(t *testing.T) {
 	// *1 \r\n $4 \r\n PING \r\n in structured form
-	input := resp.Array{Elems: []resp.Value{resp.BulkString{B: []byte("PING")}}}
+	input := &resp.Array{Elems: []resp.Value{&resp.BulkString{B: []byte("PING")}}}
 
 	cmd, perr := Parse(input)
 	if perr != nil {
@@ -29,7 +29,7 @@ func TestParse_PING_BulkString(t *testing.T) {
 
 // TestParse_PING_SimpleString verifies that a simple-string command name also works.
 func TestParse_PING_SimpleString(t *testing.T) {
-	input := resp.Array{Elems: []resp.Value{resp.SimpleString{S: []byte("PING")}}}
+	input := &resp.Array{Elems: []resp.Value{&resp.SimpleString{S: []byte("PING")}}}
 
 	cmd, perr := Parse(input)
 	if perr != nil {

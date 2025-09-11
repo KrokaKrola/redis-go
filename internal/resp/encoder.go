@@ -23,7 +23,18 @@ func (e *Encoder) Write(v Value) error {
 		}
 		return nil
 	case *BulkString:
+		if v.Null {
+			if _, err := fmt.Fprintf(e.w, "$-1\r\n"); err != nil {
+				return err
+			}
+		}
+
 		if _, err := fmt.Fprintf(e.w, "$%d\r\n%s\r\n", len(v.B), v.B); err != nil {
+			return err
+		}
+		return nil
+	case *Error:
+		if _, err := fmt.Fprintf(e.w, "-%s\r\n", v.Msg); err != nil {
 			return err
 		}
 		return nil
