@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
@@ -41,9 +40,19 @@ func Parse(v resp.Value) (*Command, resp.Value) {
 func Dispatch(cmd *Command) resp.Value {
 	switch cmd.Name {
 	case PING_COMMAND:
-		return resp.SimpleString{S: []byte("PONG")}
+		return &resp.SimpleString{S: []byte("PONG")}
+	case ECHO_COMMAND:
+		if len(cmd.Args) == 0 {
+			return &resp.Error{Msg: "Invalid number of arguments for ECHO command"}
+		}
+		bs, ok := cmd.Args[0].(*resp.BulkString)
+		if !ok {
+			return &resp.Error{Msg: "Invalid arguments for ECHO command"}
+		}
+
+		return bs
 	default:
-		return resp.Error{Msg: fmt.Sprintf("Unknown command name: %s", cmd.Name)}
+		return &resp.Error{Msg: fmt.Sprintf("Unknown command name: %s", cmd.Name)}
 	}
 }
 
@@ -67,8 +76,6 @@ func (c *Command) processArray(arr *resp.Array) resp.Value {
 		}
 		it++
 	}
-
-	log.Println("nameElem", nameElem)
 
 	switch strings.ToUpper(string(nameElem.B)) {
 	case string(PING_COMMAND):

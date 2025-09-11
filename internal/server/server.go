@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -76,8 +75,6 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 	for {
 		value, derr := decoder.Read()
 
-		log.Println("value", value)
-
 		if derr != nil {
 			if errors.Is(derr, io.EOF) {
 				break
@@ -90,13 +87,10 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 
 		cmd, perr := commands.Parse(value)
 
-		log.Println("cmd", cmd, "perr", perr)
-
 		if perr != nil {
 			encoder.Write(perr)
 		} else {
 			out := commands.Dispatch(cmd)
-			log.Println("out", out)
 			encoder.Write(out)
 		}
 

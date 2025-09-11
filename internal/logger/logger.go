@@ -16,12 +16,12 @@ func Init(level slog.Level, format string) {
 	case "json":
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 			Level:     level,
-			AddSource: true,
+			AddSource: false,
 		})
 	default:
 		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level:     level,
-			AddSource: true,
+			AddSource: false,
 		})
 	}
 

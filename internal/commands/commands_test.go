@@ -29,7 +29,7 @@ func TestParse_PING_BulkString(t *testing.T) {
 
 // TestParse_PING_SimpleString verifies that a simple-string command name also works.
 func TestParse_PING_SimpleString(t *testing.T) {
-	input := resp.Array{Elems: []resp.Value{resp.BulkString{B: []byte("PING")}}}
+	input := resp.Array{Elems: []resp.Value{resp.SimpleString{S: []byte("PING")}}}
 
 	cmd, perr := Parse(input)
 	if perr != nil {
