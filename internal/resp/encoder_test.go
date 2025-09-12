@@ -1,0 +1,41 @@
+package resp
+
+import (
+    "bytes"
+    "testing"
+)
+
+// TestEncoder_Write_NullBulkString ensures that a null bulk string is encoded
+// exactly as "$-1\r\n" with no extra data.
+func TestEncoder_Write_NullBulkString(t *testing.T) {
+    var buf bytes.Buffer
+    enc := NewEncoder(&buf)
+
+    if err := enc.Write(&BulkString{Null: true}); err != nil {
+        t.Fatalf("encoder.Write() returned error: %v", err)
+    }
+
+    got := buf.String()
+    want := "$-1\r\n"
+    if got != want {
+        t.Fatalf("unexpected output: got %q, want %q", got, want)
+    }
+}
+
+// TestEncoder_Write_BulkStringEmpty ensures that an empty non-null bulk string
+// is encoded as "$0\r\n\r\n".
+func TestEncoder_Write_BulkStringEmpty(t *testing.T) {
+    var buf bytes.Buffer
+    enc := NewEncoder(&buf)
+
+    if err := enc.Write(&BulkString{B: []byte("")}); err != nil {
+        t.Fatalf("encoder.Write() returned error: %v", err)
+    }
+
+    got := buf.String()
+    want := "$0\r\n\r\n"
+    if got != want {
+        t.Fatalf("unexpected output: got %q, want %q", got, want)
+    }
+}
+

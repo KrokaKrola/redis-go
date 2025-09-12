@@ -118,3 +118,60 @@ func TestDecoder_Read_ECHOArray(t *testing.T) {
 		t.Fatalf("expected BulkString/SimpleString arg, got %T", arg)
 	}
 }
+
+// TestDecoder_Read_NullBulkStringThenSimpleString ensures that a null bulk string
+// ("$-1\r\n") is parsed and the following value is read correctly (consumes CRLF).
+func TestDecoder_Read_NullBulkStringThenSimpleString(t *testing.T) {
+    input := "$-1\r\n+OK\r\n"
+    br := bufio.NewReader(bytes.NewBufferString(input))
+
+    dec := NewDecoder(br)
+
+    v1, err := dec.Read()
+    if err != nil {
+        t.Fatalf("decoder.Read() v1 returned error: %v", err)
+    }
+    bs, ok := v1.(*BulkString)
+    if !ok {
+        t.Fatalf("expected first value BulkString, got %T", v1)
+    }
+    if !bs.Null {
+        t.Fatalf("expected null bulk string for first value")
+    }
+
+    v2, err := dec.Read()
+    if err != nil {
+        t.Fatalf("decoder.Read() v2 returned error: %v", err)
+    }
+    ss, ok := v2.(*SimpleString)
+    if !ok {
+        t.Fatalf("expected second value SimpleString, got %T", v2)
+    }
+    if string(ss.S) != "OK" {
+        t.Fatalf("expected simple string 'OK', got %q", string(ss.S))
+    }
+}
+
+// TestDecoder_Read_BulkStringEmpty validates that an empty bulk string ($0) is
+// decoded as a non-null bulk string with zero-length payload.
+func TestDecoder_Read_BulkStringEmpty(t *testing.T) {
+    input := "$0\r\n\r\n"
+    br := bufio.NewReader(bytes.NewBufferString(input))
+
+    dec := NewDecoder(br)
+    v, err := dec.Read()
+    if err != nil {
+        t.Fatalf("decoder.Read() returned error: %v", err)
+    }
+
+    bs, ok := v.(*BulkString)
+    if !ok {
+        t.Fatalf("expected BulkString, got %T", v)
+    }
+    if bs.Null {
+        t.Fatalf("expected non-null bulk string for $0")
+    }
+    if len(bs.B) != 0 {
+        t.Fatalf("expected empty payload for $0, got %d bytes", len(bs.B))
+    }
+}

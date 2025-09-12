@@ -13,16 +13,19 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/commands"
 	"github.com/codecrafters-io/redis-starter-go/internal/logger"
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
+	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
 
 type RedisServer struct {
 	port     uint16
 	listener net.Listener
+	store    *store.Store
 }
 
 func NewRedisServer(port uint16) *RedisServer {
 	return &RedisServer{
-		port: port,
+		port:  port,
+		store: store.NewStore(),
 	}
 }
 
@@ -35,6 +38,8 @@ func (r *RedisServer) Listen() error {
 	if err != nil {
 		return err
 	}
+
+	defer l.Close()
 
 	logger.Info("Started server",
 		"address", l.Addr(),
@@ -56,7 +61,12 @@ func (r *RedisServer) acceptConnections() {
 		conn, err := r.listener.Accept()
 
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				break
+			}
+
 			logger.Error("error accepting connection", "err", err)
+			continue
 		}
 
 		go r.handleConnection(conn)
@@ -65,7 +75,7 @@ func (r *RedisServer) acceptConnections() {
 
 func (r *RedisServer) handleConnection(conn net.Conn) {
 	defer conn.Close()
-	logger.Info("accepted new connection")
+	logger.Debug("accepted new connection", "RemoteAddr", conn.RemoteAddr())
 	reader := bufio.NewReader(conn)
 	writer := bufio.NewWriter(conn)
 	decoder := resp.NewDecoder(reader)
@@ -88,9 +98,9 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 		cmd, perr := commands.Parse(value)
 
 		if perr != nil {
-			encoder.Write(perr)
+			encoder.Write(&resp.Error{Msg: perr.Error()})
 		} else {
-			out := commands.Dispatch(cmd)
+			out := commands.Dispatch(cmd, r.store)
 			encoder.Write(out)
 		}
 

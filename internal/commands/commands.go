@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
+	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
 
 type Name string
@@ -12,6 +13,8 @@ type Name string
 const (
 	PING_COMMAND Name = "PING"
 	ECHO_COMMAND Name = "ECHO"
+	GET_COMMAND  Name = "GET"
+	SET_COMMAND  Name = "SET"
 )
 
 type Command struct {
@@ -19,7 +22,7 @@ type Command struct {
 	Args []resp.Value
 }
 
-func Parse(v resp.Value) (*Command, resp.Value) {
+func Parse(v resp.Value) (*Command, error) {
 	cmd := &Command{}
 
 	switch v := v.(type) {
@@ -30,11 +33,11 @@ func Parse(v resp.Value) (*Command, resp.Value) {
 
 		return cmd, nil
 	default:
-		return nil, &resp.Error{Msg: fmt.Sprintf("ERR unknown data type: %+v", v)}
+		return nil, fmt.Errorf("ERR unknown data type: %+v", v)
 	}
 }
 
-func Dispatch(cmd *Command) resp.Value {
+func Dispatch(cmd *Command, s *store.Store) resp.Value {
 	switch cmd.Name {
 	case PING_COMMAND:
 		if len(cmd.Args) == 0 {
@@ -44,7 +47,7 @@ func Dispatch(cmd *Command) resp.Value {
 		if len(cmd.Args) == 1 {
 			b, ok := valueAsBytes(cmd.Args[0])
 			if !ok {
-				return &resp.Error{Msg: "ERR invalid argument for ECHO command"}
+				return &resp.Error{Msg: "ERR invalid argument for PING command"}
 			}
 
 			return &resp.BulkString{B: b}
@@ -55,29 +58,66 @@ func Dispatch(cmd *Command) resp.Value {
 		if len(cmd.Args) != 1 {
 			return &resp.Error{Msg: "ERR wrong number of arguments for ECHO command"}
 		}
+
 		b, ok := valueAsBytes(cmd.Args[0])
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid argument for ECHO command"}
 		}
+
 		return &resp.BulkString{B: b}
+	case SET_COMMAND:
+		if len(cmd.Args) != 2 {
+			return &resp.Error{Msg: "ERR wrong number of arguments for SET command"}
+		}
+
+		key, ok := valueAsString(cmd.Args[0])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid key value for SET command"}
+		}
+
+		value, ok := valueAsBytes(cmd.Args[1])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid value for SET command"}
+		}
+
+		s.Set(key, value)
+
+		return &resp.SimpleString{S: []byte("OK")}
+	case GET_COMMAND:
+		if len(cmd.Args) != 1 {
+			return &resp.Error{Msg: "ERR wrong number of arguments for GET command"}
+		}
+
+		key, ok := valueAsString(cmd.Args[0])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid key value for GET command"}
+		}
+
+		v, ok := s.Get(key)
+
+		if !ok {
+			return &resp.BulkString{Null: true}
+		}
+
+		return &resp.BulkString{B: v}
 	default:
 		return &resp.Error{Msg: fmt.Sprintf("ERR unknown command name: %s", cmd.Name)}
 	}
 }
 
-func (c *Command) processArray(arr *resp.Array) resp.Value {
+func (c *Command) processArray(arr *resp.Array) error {
 	if arr.Null || len(arr.Elems) == 0 {
-		return &resp.Error{Msg: "ERR invalid size of array"}
+		return fmt.Errorf("ERR invalid size of array")
 	}
 
 	b, ok := valueAsBytes(arr.Elems[0])
 	if !ok {
-		return &resp.Error{Msg: "ERR protocol error"}
+		return fmt.Errorf("ERR protocol error")
 	}
 	name := getCommandName(b)
 
 	if name == "" {
-		return &resp.Error{Msg: "ERR unknown command"}
+		return fmt.Errorf("ERR unknown command")
 	}
 	c.Name = name
 
@@ -93,6 +133,10 @@ func getCommandName(name []byte) Name {
 		return PING_COMMAND
 	} else if bytes.EqualFold(name, []byte(ECHO_COMMAND)) {
 		return ECHO_COMMAND
+	} else if bytes.EqualFold(name, []byte(GET_COMMAND)) {
+		return GET_COMMAND
+	} else if bytes.EqualFold(name, []byte(SET_COMMAND)) {
+		return SET_COMMAND
 	} else {
 		return ""
 	}
@@ -104,10 +148,26 @@ func valueAsBytes(v resp.Value) ([]byte, bool) {
 		if x.Null {
 			return nil, false
 		}
+
 		return x.B, true
 	case *resp.SimpleString:
 		return x.S, true
 	default:
 		return nil, false
+	}
+}
+
+func valueAsString(v resp.Value) (string, bool) {
+	switch x := v.(type) {
+	case *resp.BulkString:
+		if x.Null {
+			return "", false
+		}
+
+		return string(x.B), true
+	case *resp.SimpleString:
+		return string(x.S), true
+	default:
+		return "", false
 	}
 }

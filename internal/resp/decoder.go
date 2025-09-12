@@ -2,6 +2,7 @@ package resp
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"strconv"
 )
@@ -79,17 +80,26 @@ func (d *Decoder) getSizeOfTheData() (int, error) {
 	num, err := strconv.Atoi(string(sizeStr))
 
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("ERR invalid size")
 	}
 
 	return num, nil
 }
 
 func (d *Decoder) readClrf() error {
-	_, err := d.r.Discard(2)
+	b := make([]byte, 2)
+	n, err := d.r.Read(b)
 
 	if err != nil {
 		return err
+	}
+
+	if n != 2 {
+		return fmt.Errorf("ERR invalid clrf delimiter")
+	}
+
+	if !bytes.Equal(b, []byte("\r\n")) {
+		return fmt.Errorf("ERR invalid clrf delimiter")
 	}
 
 	return nil
@@ -167,14 +177,14 @@ func (d *Decoder) processBulkString() (*BulkString, error) {
 		return nil, err
 	}
 
+	if err := d.readClrf(); err != nil {
+		return nil, err
+	}
+
 	if strSize == -1 {
 		return &BulkString{
 			Null: true,
 		}, nil
-	}
-
-	if err := d.readClrf(); err != nil {
-		return nil, err
 	}
 
 	str := &BulkString{}
