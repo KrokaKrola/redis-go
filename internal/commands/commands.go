@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/codecrafters-io/redis-starter-go/internal/logger"
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
@@ -68,7 +67,8 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 
 		return &resp.BulkString{B: b}
 	case SET_COMMAND:
-		if len(cmd.Args) < 2 {
+		argsLen := len(cmd.Args)
+		if argsLen < 2 {
 			return &resp.Error{Msg: "ERR wrong number of arguments for SET command"}
 		}
 
@@ -82,12 +82,10 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 			return &resp.Error{Msg: "ERR invalid value for SET command"}
 		}
 
-		logger.Debug("cmd.Args[2] value", cmd.Args[2])
-
 		var expValue string
 		var expTime int
 
-		if cmd.Args[2] != nil {
+		if argsLen > 2 && cmd.Args[2] != nil {
 			expValue, ok = valueAsString(cmd.Args[2])
 
 			if !ok {
@@ -96,7 +94,7 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 
 		}
 
-		if cmd.Args[3] != nil {
+		if argsLen > 3 && cmd.Args[3] != nil {
 			expTime, ok = valueAsInteger(cmd.Args[3])
 
 			if !ok {
@@ -214,7 +212,7 @@ func valueAsInteger(v resp.Value) (int, bool) {
 			return 0, true
 		}
 
-		return v, false
+		return v, true
 	case *resp.SimpleString:
 		v, err := strconv.Atoi(string(x.S))
 
@@ -222,8 +220,8 @@ func valueAsInteger(v resp.Value) (int, bool) {
 			return 0, true
 		}
 
-		return v, false
+		return v, true
 	default:
-		return 0, true
+		return 0, false
 	}
 }

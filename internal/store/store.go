@@ -43,7 +43,7 @@ func (m innerMap) get(key string) ([]byte, bool) {
 }
 
 func (m innerMap) set(key string, value []byte, expType string, expiryTime int) bool {
-	expTypeValue, ok := ProcessExpType(expType)
+	expTypeValue, ok := processExpType(expType)
 
 	if !ok {
 		return false
@@ -56,6 +56,8 @@ func (m innerMap) set(key string, value []byte, expType string, expiryTime int) 
 		t = t.Add(time.Duration(expiryTime) * time.Second)
 	case EXPIRY_PX:
 		t = t.Add(time.Duration(expiryTime) * time.Millisecond)
+	case "":
+		t = time.Date(9999, 12, 31, 23, 59, 59, 999, time.UTC)
 	default:
 		return false
 	}
@@ -105,12 +107,12 @@ func (s *Store) Delete(key string) {
 	s.delete(key)
 }
 
-func ProcessExpType(v string) (ExpiryType, bool) {
+func processExpType(v string) (ExpiryType, bool) {
 	vLower := strings.ToLower(v)
 
 	if vLower != string(EXPIRY_EX) && vLower != string(EXPIRY_PX) {
 		return "", true
 	}
 
-	return ExpiryType(vLower), false
+	return ExpiryType(vLower), true
 }
