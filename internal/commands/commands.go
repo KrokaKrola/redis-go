@@ -3,7 +3,9 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 
+	"github.com/codecrafters-io/redis-starter-go/internal/logger"
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
@@ -66,7 +68,7 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 
 		return &resp.BulkString{B: b}
 	case SET_COMMAND:
-		if len(cmd.Args) != 2 {
+		if len(cmd.Args) < 2 {
 			return &resp.Error{Msg: "ERR wrong number of arguments for SET command"}
 		}
 
@@ -80,7 +82,35 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 			return &resp.Error{Msg: "ERR invalid value for SET command"}
 		}
 
-		s.Set(key, value)
+		logger.Debug("cmd.Args[2] value", cmd.Args[2])
+
+		var expValue string
+		var expTime int
+
+		if cmd.Args[2] != nil {
+			expValue, ok = valueAsString(cmd.Args[2])
+
+			if !ok {
+				return &resp.Error{Msg: "ERR invalid value for SET command"}
+			}
+
+		}
+
+		if cmd.Args[3] != nil {
+			expTime, ok = valueAsInteger(cmd.Args[3])
+
+			if !ok {
+				return &resp.Error{Msg: "ERR invalid value for SET command"}
+			}
+
+			if expTime < 0 {
+				return &resp.Error{Msg: "ERR invalid value for SET command"}
+			}
+		}
+
+		if ok := s.Set(key, value, expValue, expTime); !ok {
+			return &resp.Error{Msg: "ERR invalid value for SET command"}
+		}
 
 		return &resp.SimpleString{S: []byte("OK")}
 	case GET_COMMAND:
@@ -153,7 +183,7 @@ func valueAsBytes(v resp.Value) ([]byte, bool) {
 	case *resp.SimpleString:
 		return x.S, true
 	default:
-		return nil, false
+		return nil, true
 	}
 }
 
@@ -168,6 +198,32 @@ func valueAsString(v resp.Value) (string, bool) {
 	case *resp.SimpleString:
 		return string(x.S), true
 	default:
-		return "", false
+		return "", true
+	}
+}
+
+func valueAsInteger(v resp.Value) (int, bool) {
+	switch x := v.(type) {
+	case *resp.BulkString:
+		if x.Null {
+			return 0, false
+		}
+		v, err := strconv.Atoi(string(x.B))
+
+		if err != nil {
+			return 0, true
+		}
+
+		return v, false
+	case *resp.SimpleString:
+		v, err := strconv.Atoi(string(x.S))
+
+		if err != nil {
+			return 0, true
+		}
+
+		return v, false
+	default:
+		return 0, true
 	}
 }
