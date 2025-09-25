@@ -68,7 +68,7 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 		return &resp.BulkString{B: b}
 	case SET_COMMAND:
 		argsLen := len(cmd.Args)
-		if argsLen < 2 {
+		if argsLen < 2 || argsLen > 4 {
 			return &resp.Error{Msg: "ERR wrong number of arguments for SET command"}
 		}
 
@@ -82,32 +82,41 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 			return &resp.Error{Msg: "ERR invalid value for SET command"}
 		}
 
-		var expValue string
+		var expiryType store.ExpiryType
 		var expTime int
 
 		if argsLen > 2 && cmd.Args[2] != nil {
-			expValue, ok = valueAsString(cmd.Args[2])
+			expValue, ok := valueAsString(cmd.Args[2])
 
 			if !ok {
-				return &resp.Error{Msg: "ERR invalid value for SET command"}
+				return &resp.Error{Msg: "ERR invalid EXP value"}
 			}
 
+			expiryType, ok = store.ProcessExpType(expValue)
+
+			if !ok {
+				return &resp.Error{Msg: "ERR invalid EXP value"}
+			}
 		}
 
 		if argsLen > 3 && cmd.Args[3] != nil {
 			expTime, ok = valueAsInteger(cmd.Args[3])
 
 			if !ok {
-				return &resp.Error{Msg: "ERR invalid value for SET command"}
+				return &resp.Error{Msg: "ERR invalid expTime for SET command"}
 			}
 
-			if expTime < 0 {
-				return &resp.Error{Msg: "ERR invalid value for SET command"}
+			if expTime <= 0 {
+				return &resp.Error{Msg: "ERR invalid expTime for SET command"}
 			}
 		}
 
-		if ok := s.Set(key, value, expValue, expTime); !ok {
-			return &resp.Error{Msg: "ERR invalid value for SET command"}
+		if expiryType != "" && expTime == 0 {
+			return &resp.Error{Msg: "ERR invalid expTime for SET command"}
+		}
+
+		if ok := s.Set(key, value, expiryType, expTime); !ok {
+			return &resp.Error{Msg: "ERR during executing store SET command"}
 		}
 
 		return &resp.SimpleString{S: []byte("OK")}
@@ -170,7 +179,7 @@ func getCommandName(name []byte) Name {
 	}
 }
 
-func valueAsBytes(v resp.Value) ([]byte, bool) {
+func valueAsBytes(v resp.Value) (value []byte, ok bool) {
 	switch x := v.(type) {
 	case *resp.BulkString:
 		if x.Null {
@@ -181,11 +190,11 @@ func valueAsBytes(v resp.Value) ([]byte, bool) {
 	case *resp.SimpleString:
 		return x.S, true
 	default:
-		return nil, true
+		return nil, false
 	}
 }
 
-func valueAsString(v resp.Value) (string, bool) {
+func valueAsString(v resp.Value) (value string, ok bool) {
 	switch x := v.(type) {
 	case *resp.BulkString:
 		if x.Null {
@@ -196,20 +205,21 @@ func valueAsString(v resp.Value) (string, bool) {
 	case *resp.SimpleString:
 		return string(x.S), true
 	default:
-		return "", true
+		return "", false
 	}
 }
 
-func valueAsInteger(v resp.Value) (int, bool) {
+func valueAsInteger(v resp.Value) (value int, ok bool) {
 	switch x := v.(type) {
 	case *resp.BulkString:
 		if x.Null {
 			return 0, false
 		}
+
 		v, err := strconv.Atoi(string(x.B))
 
 		if err != nil {
-			return 0, true
+			return 0, false
 		}
 
 		return v, true
@@ -217,7 +227,7 @@ func valueAsInteger(v resp.Value) (int, bool) {
 		v, err := strconv.Atoi(string(x.S))
 
 		if err != nil {
-			return 0, true
+			return 0, false
 		}
 
 		return v, true

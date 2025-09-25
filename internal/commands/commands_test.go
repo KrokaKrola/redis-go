@@ -118,6 +118,8 @@ func TestDispatch_SET_Then_GET_ReturnsValue(t *testing.T) {
 		Args: []resp.Value{
 			&resp.BulkString{B: []byte("mykey")},
 			&resp.BulkString{B: []byte("myval")},
+			&resp.BulkString{B: []byte("px")},
+			&resp.BulkString{B: []byte("100")},
 		},
 	}
 	out1 := Dispatch(setCmd, s)
@@ -210,28 +212,24 @@ func TestDispatch_GET_Nonexistent_ReturnsNull(t *testing.T) {
 	}
 }
 
-// TODO: fix test, since now it's valid args, ping should respond with passed value as a bukl string
-// // TestDispatch_PING_InvalidArgType ensures that PING with a non-string argument
-// // returns an error mentioning the PING command (not ECHO).
-// func TestDispatch_PING_InvalidArgType(t *testing.T) {
-// 	cmd := &Command{
-// 		Name: PING_COMMAND,
-// 		Args: []resp.Value{&resp.Integer{N: 5}},
-// 	}
+func TestDispatch_PING_WithArg_ReturnsBulkString(t *testing.T) {
+	cmd := &Command{
+		Name: PING_COMMAND,
+		Args: []resp.Value{&resp.BulkString{B: []byte("hello")}},
+	}
 
-// 	out := Dispatch(cmd, store.NewStore())
-// 	e, ok := out.(*resp.Error)
-// 	if !ok {
-// 		t.Fatalf("expected resp.Error, got %T", out)
-// 	}
-// 	if e.Msg == "" {
-// 		t.Fatalf("expected non-empty error message")
-// 	}
-// 	// The message should refer to PING, not ECHO.
-// 	if !containsInsensitive(e.Msg, "PING") {
-// 		t.Fatalf("expected error to reference 'PING', got: %q", e.Msg)
-// 	}
-// }
+	out := Dispatch(cmd, store.NewStore())
+	bs, ok := out.(*resp.BulkString)
+	if !ok {
+		t.Fatalf("expected BulkString, got %T", out)
+	}
+	if bs.Null {
+		t.Fatalf("unexpected null BulkString response")
+	}
+	if string(bs.B) != "hello" {
+		t.Fatalf("unexpected PING response: got %q, want %q", string(bs.B), "hello")
+	}
+}
 
 // TestDispatch_PING_TooManyArgs ensures that PING with more than one argument
 // fails with an error.
@@ -248,27 +246,6 @@ func TestDispatch_PING_TooManyArgs(t *testing.T) {
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error for too many args, got %T", out)
 	}
-}
-
-// containsInsensitive reports whether substr is in s, case-insensitive.
-func containsInsensitive(s, substr string) bool {
-	sLower := make([]rune, 0, len(s))
-	for _, r := range s {
-		if r >= 'A' && r <= 'Z' {
-			r = r - 'A' + 'a'
-		}
-		sLower = append(sLower, r)
-	}
-	subLower := make([]rune, 0, len(substr))
-	for _, r := range substr {
-		if r >= 'A' && r <= 'Z' {
-			r = r - 'A' + 'a'
-		}
-		subLower = append(subLower, r)
-	}
-	s2 := string(sLower)
-	sub2 := string(subLower)
-	return len(s2) >= len(sub2) && (len(sub2) == 0 || indexOf(s2, sub2) >= 0)
 }
 
 // indexOf returns the index of substr in s or -1 if not found.

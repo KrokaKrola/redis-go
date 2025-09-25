@@ -27,31 +27,24 @@ func newStoreValue(value []byte, expiryTime time.Time) storeValue {
 
 type innerMap map[string]storeValue
 
-func (m innerMap) get(key string) ([]byte, bool) {
+func (m innerMap) get(key string) (value []byte, ok bool, expired bool) {
 	v, ok := m[key]
 
 	if ok {
 		timeDiff := v.expiryTime.Compare(time.Now())
 
 		if timeDiff <= 0 {
-			m.delete(key)
-			return nil, false
+			return nil, true, true
 		}
 	}
 
-	return v.value, ok
+	return v.value, ok, false
 }
 
-func (m innerMap) set(key string, value []byte, expType string, expiryTime int) bool {
-	expTypeValue, ok := processExpType(expType)
-
-	if !ok {
-		return false
-	}
-
+func (m innerMap) set(key string, value []byte, expType ExpiryType, expiryTime int) bool {
 	t := time.Now()
 
-	switch expTypeValue {
+	switch expType {
 	case EXPIRY_EX:
 		t = t.Add(time.Duration(expiryTime) * time.Second)
 	case EXPIRY_PX:
@@ -79,21 +72,44 @@ func NewStore() *Store {
 	return &Store{innerMap: make(innerMap)}
 }
 
-func (s *Store) Get(key string) ([]byte, bool) {
+func (s *Store) Get(key string) (value []byte, ok bool) {
+	// lock read
 	s.RLock()
-	defer s.RUnlock()
-	value, ok := s.get(key)
+	value, ok, expired := s.get(key)
 
 	if !ok {
+		// unlocking read when key is not found
+		s.RUnlock()
 		return nil, ok
 	}
 
-	cValue := make([]byte, len(value))
-	copy(cValue, value)
-	return cValue, ok
+	if !expired {
+		cpy := append([]byte{}, value...)
+		s.RUnlock()
+		return cpy, true
+	}
+
+	// unlock read if there is a key with expired time value
+	s.RUnlock()
+	// lock read & write since we will need to delete found value
+	s.Lock()
+	defer s.Unlock()
+
+	value, ok, expired = s.get(key)
+
+	if !ok || expired {
+		if ok && expired {
+			s.delete(key)
+		}
+
+		return nil, false
+	}
+
+	cpy := append([]byte{}, value...)
+	return cpy, true
 }
 
-func (s *Store) Set(key string, value []byte, expType string, expiryTime int) bool {
+func (s *Store) Set(key string, value []byte, expType ExpiryType, expiryTime int) bool {
 	s.Lock()
 	defer s.Unlock()
 	cValue := make([]byte, len(value))
@@ -107,11 +123,16 @@ func (s *Store) Delete(key string) {
 	s.delete(key)
 }
 
-func processExpType(v string) (ExpiryType, bool) {
+func ProcessExpType(v string) (ExpiryType, bool) {
 	vLower := strings.ToLower(v)
 
-	if vLower != string(EXPIRY_EX) && vLower != string(EXPIRY_PX) {
+	// allow empty string for indefinite key storage
+	if vLower == "" {
 		return "", true
+	}
+
+	if vLower != string(EXPIRY_EX) && vLower != string(EXPIRY_PX) {
+		return "", false
 	}
 
 	return ExpiryType(vLower), true
