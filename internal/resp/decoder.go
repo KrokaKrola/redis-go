@@ -49,6 +49,14 @@ func (d *Decoder) Read() (Value, error) {
 		}
 
 		return value, nil
+	case byte(':'):
+		value, err := d.processInteger()
+
+		if err != nil {
+			return nil, err
+		}
+
+		return value, nil
 	default:
 		return nil, fmt.Errorf("unknown data type: %s", string(b))
 	}
@@ -203,4 +211,69 @@ func (d *Decoder) processBulkString() (*BulkString, error) {
 	}
 
 	return str, nil
+}
+
+func (d *Decoder) processInteger() (*Integer, error) {
+	sign, err := d.r.Peek(1)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var isNegative bool
+
+	if sign[0] == '+' || sign[0] == '-' {
+		d.r.ReadByte()
+
+		if sign[0] == '-' {
+			isNegative = true
+		}
+	}
+
+	integer := &Integer{}
+	var str []byte
+
+	for {
+		c, err := d.r.ReadByte()
+
+		if err != nil {
+			return nil, err
+		}
+
+		if c == '\r' || c == '\n' {
+			break
+		}
+
+		isDigit := c >= '0' && c <= '9'
+
+		if !isDigit {
+			return nil, fmt.Errorf("ERR invalid integer value")
+		}
+
+		str = append(str, c)
+
+		nextChar, err := d.r.Peek(1)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if nextChar[0] == '\r' {
+			break
+		}
+	}
+
+	if len(str) == 0 {
+		return nil, fmt.Errorf("ERR invalid integer value")
+	}
+
+	res, err := strconv.ParseInt(string(str), 10, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	integer.N = res
+	integer.IsNegative = isNegative
+
+	return integer, nil
 }

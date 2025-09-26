@@ -13,7 +13,6 @@ import (
 // TestParse_PING_BulkString verifies that Parse accepts an array
 // with a bulk-string command name "PING" and no arguments.
 func TestParse_PING_BulkString(t *testing.T) {
-	// *1 \r\n $4 \r\n PING \r\n in structured form
 	input := &resp.Array{Elems: []resp.Value{&resp.BulkString{B: []byte("PING")}}}
 
 	cmd, perr := Parse(input)
@@ -246,15 +245,4 @@ func TestDispatch_PING_TooManyArgs(t *testing.T) {
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error for too many args, got %T", out)
 	}
-}
-
-// indexOf returns the index of substr in s or -1 if not found.
-func indexOf(s, substr string) int {
-	// Simple substring search adequate for small test strings
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }
