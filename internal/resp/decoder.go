@@ -220,28 +220,23 @@ func (d *Decoder) processInteger() (*Integer, error) {
 		return nil, err
 	}
 
-	var isNegative bool
+	var str []byte
 
 	if sign[0] == '+' || sign[0] == '-' {
 		d.r.ReadByte()
 
 		if sign[0] == '-' {
-			isNegative = true
+			str = append(str, '-')
 		}
 	}
 
 	integer := &Integer{}
-	var str []byte
 
 	for {
 		c, err := d.r.ReadByte()
 
 		if err != nil {
 			return nil, err
-		}
-
-		if c == '\r' || c == '\n' {
-			break
 		}
 
 		isDigit := c >= '0' && c <= '9'
@@ -267,13 +262,16 @@ func (d *Decoder) processInteger() (*Integer, error) {
 		return nil, fmt.Errorf("ERR invalid integer value")
 	}
 
-	res, err := strconv.ParseInt(string(str), 10, 0)
+	res, err := strconv.ParseInt(string(str), 10, 64)
 	if err != nil {
 		return nil, err
 	}
 
 	integer.N = res
-	integer.IsNegative = isNegative
+
+	if err := d.readClrf(); err != nil {
+		return nil, err
+	}
 
 	return integer, nil
 }

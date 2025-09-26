@@ -18,8 +18,7 @@ type BulkString struct {
 func (s *BulkString) isValue() {}
 
 type Integer struct {
-	N          int64
-	IsNegative bool
+	N int64
 }
 
 func (s *Integer) isValue() {}

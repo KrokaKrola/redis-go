@@ -62,7 +62,7 @@ func TestEncoder_Write_NegativeInteger(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewEncoder(&buf)
 
-	if err := enc.Write(&Integer{N: 5, IsNegative: true}); err != nil {
+	if err := enc.Write(&Integer{N: -5}); err != nil {
 		t.Fatalf("encoder.Write() returned error: %v", err)
 	}
 

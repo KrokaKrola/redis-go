@@ -3,6 +3,8 @@ package resp
 import (
 	"bufio"
 	"bytes"
+	"fmt"
+	"math"
 	"testing"
 )
 
@@ -237,7 +239,88 @@ func TestDecoder_Read_Integer_WithNegativeSign(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", v)
 	}
 
-	if i.N != 5 && i.IsNegative {
-		t.Fatalf("expected integer with value 5 and IsNegative = true, got value %d with IsNegative=%t", i.N, i.IsNegative)
+	if i.N != -5 {
+		t.Fatalf("expected integer with value 5 and IsNegative = true, got value %d", i.N)
+	}
+}
+
+// TestDecoder_Read_IntegerFollowedBySimpleString verifies that decoding an
+// integer consumes its CRLF and the subsequent frame can be read normally.
+func TestDecoder_Read_IntegerFollowedBySimpleString(t *testing.T) {
+	input := ":1\r\n+OK\r\n"
+	br := bufio.NewReader(bytes.NewBufferString(input))
+
+	dec := NewDecoder(br)
+
+	v1, err := dec.Read()
+	if err != nil {
+		t.Fatalf("decoder.Read() v1 returned error: %v", err)
+	}
+	i, ok := v1.(*Integer)
+	if !ok {
+		t.Fatalf("expected first value Integer, got %T", v1)
+	}
+	if i.N != 1 {
+		t.Fatalf("expected integer 1, got %d", i.N)
+	}
+
+	v2, err := dec.Read()
+	if err != nil {
+		t.Fatalf("decoder.Read() v2 returned error: %v", err)
+	}
+	ss, ok := v2.(*SimpleString)
+	if !ok {
+		t.Fatalf("expected second value SimpleString, got %T", v2)
+	}
+	if string(ss.S) != "OK" {
+		t.Fatalf("expected simple string 'OK', got %q", string(ss.S))
+	}
+}
+
+// TestDecoder_Read_IntegerRejectsLFOnly ensures RESP integers terminated with
+// LF-only are rejected since RESP requires CRLF.
+func TestDecoder_Read_IntegerRejectsLFOnly(t *testing.T) {
+	input := ":1\n"
+	br := bufio.NewReader(bytes.NewBufferString(input))
+
+	dec := NewDecoder(br)
+
+	if _, err := dec.Read(); err == nil {
+		t.Fatalf("expected decoder.Read() to fail for LF-only terminator")
+	}
+}
+
+// TestRESP_IntegerExtremesRoundTrip validates decoding and re-encoding of
+// RESP integer boundary values.
+func TestRESP_IntegerExtremesRoundTrip(t *testing.T) {
+	cases := []int64{math.MaxInt64, math.MinInt64}
+
+	for _, tc := range cases {
+		input := fmt.Sprintf(":%d\r\n", tc)
+		br := bufio.NewReader(bytes.NewBufferString(input))
+
+		dec := NewDecoder(br)
+		v, err := dec.Read()
+		if err != nil {
+			t.Fatalf("decoder.Read() returned error for %d: %v", tc, err)
+		}
+
+		i, ok := v.(*Integer)
+		if !ok {
+			t.Fatalf("expected Integer for %d, got %T", tc, v)
+		}
+		if i.N != tc {
+			t.Fatalf("expected integer %d, got %d", tc, i.N)
+		}
+
+		var buf bytes.Buffer
+		enc := NewEncoder(&buf)
+		if err := enc.Write(i); err != nil {
+			t.Fatalf("encoder.Write() returned error for %d: %v", tc, err)
+		}
+
+		if got := buf.String(); got != input {
+			t.Fatalf("unexpected round-trip output for %d: got %q, want %q", tc, got, input)
+		}
 	}
 }

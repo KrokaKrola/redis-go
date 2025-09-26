@@ -33,13 +33,7 @@ func (e *Encoder) Write(v Value) error {
 			}
 		}
 	case *Integer:
-		var sign string
-
-		if v.IsNegative {
-			sign = "-"
-		}
-
-		if _, err := fmt.Fprintf(e.w, ":%s%d\r\n", sign, v.N); err != nil {
+		if _, err := fmt.Fprintf(e.w, ":%d\r\n", v.N); err != nil {
 			return err
 		}
 	case *Error:
