@@ -85,6 +85,8 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 	for {
 		value, derr := decoder.Read()
 
+		logger.Debug("decoder.Read result value: %#v, derr: %#v", value, derr)
+
 		if derr != nil {
 			if errors.Is(derr, io.EOF) {
 				break
@@ -97,10 +99,13 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 
 		cmd, perr := commands.Parse(value)
 
+		logger.Debug("commands.Parse result cmd: %#v, perr: %#v", cmd, perr)
+
 		if perr != nil {
 			encoder.Write(&resp.Error{Msg: perr.Error()})
 		} else {
 			out := commands.Dispatch(cmd, r.store)
+			logger.Debug("commands.Dispatch result out: %#v", out)
 			encoder.Write(out)
 		}
 

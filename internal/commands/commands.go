@@ -3,19 +3,9 @@ package commands
 import (
 	"bytes"
 	"fmt"
-	"strconv"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
-)
-
-type Name string
-
-const (
-	PING_COMMAND Name = "PING"
-	ECHO_COMMAND Name = "ECHO"
-	GET_COMMAND  Name = "GET"
-	SET_COMMAND  Name = "SET"
 )
 
 type Command struct {
@@ -137,6 +127,39 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 		}
 
 		return &resp.BulkString{B: v}
+	case RPUSH_COMMAND:
+		argsLen := len(cmd.Args)
+		if argsLen < 2 {
+			return &resp.Error{Msg: "ERR wrong number of arguments for RPUSH command"}
+		}
+
+		key, ok := valueAsString(cmd.Args[0])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid key value for RPUSH command"}
+		}
+
+		var values []string
+
+		for argsLen-len(values) != 1 {
+			value, ok := valueAsString(cmd.Args[len(values)+1])
+			if !ok {
+				return &resp.Error{Msg: "ERR invalid type of RPUSH arguments list item"}
+			}
+
+			values = append(values, value)
+		}
+
+		if len(values) == 0 {
+			return &resp.Error{Msg: "ERR empty values for RPUSH command"}
+		}
+
+		v, ok := s.Rpush(key, store.List{L: values})
+
+		if !ok {
+			return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
+		}
+
+		return &resp.Integer{N: v}
 	default:
 		return &resp.Error{Msg: fmt.Sprintf("ERR unknown command name: %s", cmd.Name)}
 	}
@@ -154,7 +177,7 @@ func (c *Command) processArray(arr *resp.Array) error {
 	name := getCommandName(b)
 
 	if name == "" {
-		return fmt.Errorf("ERR unknown command")
+		return fmt.Errorf("ERR something went wrong while getting command name, probably command name is not defined")
 	}
 	c.Name = name
 
@@ -174,64 +197,9 @@ func getCommandName(name []byte) Name {
 		return GET_COMMAND
 	} else if bytes.EqualFold(name, []byte(SET_COMMAND)) {
 		return SET_COMMAND
+	} else if bytes.EqualFold(name, []byte(RPUSH_COMMAND)) {
+		return RPUSH_COMMAND
 	} else {
 		return ""
-	}
-}
-
-func valueAsBytes(v resp.Value) (value []byte, ok bool) {
-	switch x := v.(type) {
-	case *resp.BulkString:
-		if x.Null {
-			return nil, false
-		}
-
-		return x.B, true
-	case *resp.SimpleString:
-		return x.S, true
-	default:
-		return nil, false
-	}
-}
-
-func valueAsString(v resp.Value) (value string, ok bool) {
-	switch x := v.(type) {
-	case *resp.BulkString:
-		if x.Null {
-			return "", false
-		}
-
-		return string(x.B), true
-	case *resp.SimpleString:
-		return string(x.S), true
-	default:
-		return "", false
-	}
-}
-
-func valueAsInteger(v resp.Value) (value int, ok bool) {
-	switch x := v.(type) {
-	case *resp.BulkString:
-		if x.Null {
-			return 0, false
-		}
-
-		v, err := strconv.Atoi(string(x.B))
-
-		if err != nil {
-			return 0, false
-		}
-
-		return v, true
-	case *resp.SimpleString:
-		v, err := strconv.Atoi(string(x.S))
-
-		if err != nil {
-			return 0, false
-		}
-
-		return v, true
-	default:
-		return 0, false
 	}
 }
