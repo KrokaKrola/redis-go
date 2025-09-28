@@ -7,6 +7,12 @@ type storeValue struct {
 	expiryTime time.Time
 }
 
+func (v storeValue) isExpired() bool {
+	timeDiff := v.expiryTime.Compare(time.Now())
+
+	return timeDiff <= 0
+}
+
 func newStoreValue(value StoreValueType, expiryTime time.Time) storeValue {
 	return storeValue{
 		value,
@@ -20,19 +26,17 @@ func (m innerMap) get(key string) (value []byte, ok bool, expired bool) {
 	v, ok := m[key]
 
 	if ok {
-		timeDiff := v.expiryTime.Compare(time.Now())
-
-		if timeDiff <= 0 {
+		if v.isExpired() {
 			return nil, true, true
 		}
 	}
 
-	switch v := v.value.(type) {
-	case RawBytes:
-		return v.B, ok, false
-	default:
+	rb, isRawBytes := v.value.(RawBytes)
+	if !isRawBytes {
 		return nil, false, false
 	}
+
+	return rb.B, ok, false
 }
 
 func getPossibleEndTime() time.Time {
@@ -70,9 +74,7 @@ func (m innerMap) set(key string, value []byte, expType ExpiryType, expiryTime i
 func (m innerMap) append(key string, arr []string) (int64, bool) {
 	v, ok := m[key]
 
-	timeDiff := v.expiryTime.Compare(time.Now())
-
-	if !ok || timeDiff <= 0 {
+	if !ok || v.isExpired() {
 		m[key] = newStoreValue(List{L: arr}, getPossibleEndTime())
 		return int64(len(arr)), true
 	}
@@ -89,4 +91,23 @@ func (m innerMap) append(key string, arr []string) (int64, bool) {
 
 func (m innerMap) delete(key string) {
 	delete(m, key)
+}
+
+func (m innerMap) getList(key string) (list List, ok bool, expired bool, wrongType bool) {
+	v, ok := m[key]
+
+	if !ok {
+		return List{Null: true}, false, false, false
+	}
+
+	if v.isExpired() {
+		return List{Null: true}, true, true, false
+	}
+
+	l, isList := v.value.(List)
+	if !isList {
+		return List{Null: true}, false, false, true
+	}
+
+	return l, true, false, false
 }

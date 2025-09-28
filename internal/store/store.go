@@ -69,3 +69,56 @@ func (s *Store) Delete(key string) {
 	defer s.Unlock()
 	s.delete(key)
 }
+
+func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
+	s.RLock()
+
+	if start > stop {
+		s.RUnlock()
+		return List{Null: true}, true
+	}
+
+	storeList, ok, expired, wrongType := s.getList(key)
+
+	if wrongType {
+		s.RUnlock()
+		return List{Null: true}, false
+	}
+
+	if !ok {
+		s.RUnlock()
+		return List{Null: true}, true
+	}
+
+	if expired {
+		s.RUnlock()
+
+		s.Lock()
+		defer s.Unlock()
+
+		s.delete(key)
+		return List{Null: true}, true
+	}
+
+	if storeList.Null {
+		s.RUnlock()
+		return List{Null: true}, true
+	}
+
+	storeListLen := len(storeList.L)
+
+	if start >= storeListLen {
+		s.RUnlock()
+		return List{Null: true}, true
+	}
+
+	stop += 1
+
+	if stop >= storeListLen {
+		stop = storeListLen
+	}
+
+	s.RUnlock()
+
+	return List{L: storeList.L[start:stop]}, true
+}

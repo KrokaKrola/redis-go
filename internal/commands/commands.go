@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
@@ -24,7 +24,7 @@ func Parse(v resp.Value) (*Command, error) {
 
 		return cmd, nil
 	default:
-		return nil, fmt.Errorf("ERR unknown data type: %+v", v)
+		return nil, fmt.Errorf("ERR got unknown data type during parsing: %+v", v)
 	}
 }
 
@@ -160,6 +160,44 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 		}
 
 		return &resp.Integer{N: v}
+	case LRANGE_COMMAND:
+		argsLen := len(cmd.Args)
+
+		if argsLen < 3 {
+			return &resp.Error{Msg: "ERR wrong number of arguments for LRANGE command"}
+		}
+
+		key, ok := valueAsString(cmd.Args[0])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid key value for LRANGE command"}
+		}
+
+		start, ok := valueAsInteger(cmd.Args[1])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid start value for LRANGE command"}
+		}
+
+		stop, ok := valueAsInteger(cmd.Args[2])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid stop value for LRANGE command"}
+		}
+
+		v, ok := s.Lrange(key, start, stop)
+		if !ok {
+			return &resp.Error{Msg: "ERR LRANGE internal error"}
+		}
+
+		if v.Null || len(v.L) == 0 {
+			return &resp.Array{Null: true}
+		}
+
+		resArray := &resp.Array{}
+
+		for _, v := range v.L {
+			resArray.Elems = append(resArray.Elems, &resp.BulkString{B: []byte(v)})
+		}
+
+		return resArray
 	default:
 		return &resp.Error{Msg: fmt.Sprintf("ERR unknown command name: %s", cmd.Name)}
 	}
@@ -189,17 +227,6 @@ func (c *Command) processArray(arr *resp.Array) error {
 }
 
 func getCommandName(name []byte) Name {
-	if bytes.EqualFold(name, []byte(PING_COMMAND)) {
-		return PING_COMMAND
-	} else if bytes.EqualFold(name, []byte(ECHO_COMMAND)) {
-		return ECHO_COMMAND
-	} else if bytes.EqualFold(name, []byte(GET_COMMAND)) {
-		return GET_COMMAND
-	} else if bytes.EqualFold(name, []byte(SET_COMMAND)) {
-		return SET_COMMAND
-	} else if bytes.EqualFold(name, []byte(RPUSH_COMMAND)) {
-		return RPUSH_COMMAND
-	} else {
-		return ""
-	}
+	upper := strings.ToUpper(string(name))
+	return commandByName[upper]
 }

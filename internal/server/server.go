@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -85,7 +86,7 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 	for {
 		value, derr := decoder.Read()
 
-		logger.Debug("decoder.Read result value: %#v, derr: %#v", value, derr)
+		logger.Debug("decoder.Read result", slog.Any("value", value), slog.Any("derr", derr))
 
 		if derr != nil {
 			if errors.Is(derr, io.EOF) {
@@ -99,14 +100,18 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 
 		cmd, perr := commands.Parse(value)
 
-		logger.Debug("commands.Parse result cmd: %#v, perr: %#v", cmd, perr)
+		logger.Debug("commands.Parse result", slog.Any("cmd", cmd), slog.Any("perr", perr))
 
 		if perr != nil {
 			encoder.Write(&resp.Error{Msg: perr.Error()})
 		} else {
 			out := commands.Dispatch(cmd, r.store)
-			logger.Debug("commands.Dispatch result out: %#v", out)
-			encoder.Write(out)
+			logger.Debug("commands.Dispatch result", slog.Any("out", out))
+
+			if err := encoder.Write(out); err != nil {
+				encoder.Write(&resp.Error{Msg: fmt.Sprintf("ERR encoder failed to write a response: %T", err.Error())})
+			}
+
 		}
 
 		writer.Flush()

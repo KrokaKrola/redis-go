@@ -40,6 +40,29 @@ func (e *Encoder) Write(v Value) error {
 		if _, err := fmt.Fprintf(e.w, "-%s\r\n", v.Msg); err != nil {
 			return err
 		}
+	case *Array:
+		if v.Null || len(v.Elems) == 0 {
+			if _, err := fmt.Fprintf(e.w, "*0\r\n"); err != nil {
+				return err
+			}
+
+			break
+		}
+
+		if _, err := fmt.Fprintf(e.w, "*%d\r\n", len(v.Elems)); err != nil {
+			return err
+		}
+
+		for _, v := range v.Elems {
+			bs, ok := v.(*BulkString)
+			if !ok {
+				return fmt.Errorf("MISSTYPE of the element in the underlying array")
+			}
+
+			if _, err := fmt.Fprintf(e.w, "$%d\r\n%s\r\n", len(bs.B), bs.B); err != nil {
+				return err
+			}
+		}
 	default:
 		return fmt.Errorf("unknown value type %T", v)
 	}

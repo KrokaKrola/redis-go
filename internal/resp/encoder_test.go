@@ -72,3 +72,63 @@ func TestEncoder_Write_NegativeInteger(t *testing.T) {
 		t.Fatalf("unexpected output: got %q, want %q", got, want)
 	}
 }
+
+// TestEncoder_Write_Array ensuges that an array
+// is encoded as a valid value
+func TestEncoder_Write_Array(t *testing.T) {
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	if err := enc.Write(&Array{
+		Elems: []Value{
+			&BulkString{B: []byte("a")},
+			&BulkString{B: []byte("ab")},
+			&BulkString{B: []byte("abc")},
+		},
+	}); err != nil {
+		t.Fatalf("encoder.Write() returned error: %v", err)
+	}
+
+	got := buf.String()
+	want := "*3\r\n$1\r\na\r\n$2\r\nab\r\n$3\r\nabc\r\n"
+	if got != want {
+		t.Fatalf("unexpected output: got %q, want %q", got, want)
+	}
+}
+
+// TestEncoder_Write_Array_Empty ensuges that an array
+// is encoded as a valid value if array is empty
+func TestEncoder_Write_Array_Empty(t *testing.T) {
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	if err := enc.Write(&Array{
+		Elems: []Value{},
+		Null:  true,
+	}); err != nil {
+		t.Fatalf("encoder.Write() returned error: %v", err)
+	}
+
+	got := buf.String()
+	want := "*0\r\n"
+	if got != want {
+		t.Fatalf("unexpected output: got %q, want %q", got, want)
+	}
+}
+
+// TestEncoder_Write_Array_MissType ensuges that an array
+// is encoded as a valid value if array is empty
+func TestEncoder_Write_Array_MissType(t *testing.T) {
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	if err := enc.Write(&Array{
+		Elems: []Value{
+			&BulkString{B: []byte("a")},
+			&Integer{N: 5},
+		},
+	}); err == nil {
+		t.Fatalf("expected error for decoding invalid array type, got nil")
+	}
+
+}

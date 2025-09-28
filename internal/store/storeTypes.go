@@ -11,7 +11,8 @@ type RawBytes struct {
 func (t RawBytes) isValue() {}
 
 type List struct {
-	L []string
+	L    []string
+	Null bool
 }
 
 func (t List) isValue() {}
