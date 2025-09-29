@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
@@ -127,15 +126,15 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 		}
 
 		return &resp.BulkString{B: v}
-	case RPUSH_COMMAND:
+	case RPUSH_COMMAND, LPUSH_COMMAND:
 		argsLen := len(cmd.Args)
 		if argsLen < 2 {
-			return &resp.Error{Msg: "ERR wrong number of arguments for RPUSH command"}
+			return &resp.Error{Msg: fmt.Sprintf("ERR wrong number of arguments for %s command", cmd.Name)}
 		}
 
 		key, ok := valueAsString(cmd.Args[0])
 		if !ok {
-			return &resp.Error{Msg: "ERR invalid key value for RPUSH command"}
+			return &resp.Error{Msg: fmt.Sprintf("ERR invalid key value for %s command", cmd.Name)}
 		}
 
 		var values []string
@@ -143,23 +142,31 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 		for argsLen-len(values) != 1 {
 			value, ok := valueAsString(cmd.Args[len(values)+1])
 			if !ok {
-				return &resp.Error{Msg: "ERR invalid type of RPUSH arguments list item"}
+				return &resp.Error{Msg: fmt.Sprintf("ERR invalid type of %s arguments list item", cmd.Name)}
 			}
 
 			values = append(values, value)
 		}
 
 		if len(values) == 0 {
-			return &resp.Error{Msg: "ERR empty values for RPUSH command"}
+			return &resp.Error{Msg: fmt.Sprintf("ERR empty values for %s command", cmd.Name)}
 		}
 
-		v, ok := s.Rpush(key, store.List{L: values})
+		var len int64
+		var isPushOk bool
 
-		if !ok {
-			return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
+		switch cmd.Name {
+		case RPUSH_COMMAND:
+			len, isPushOk = s.Rpush(key, values)
+		case LPUSH_COMMAND:
+			len, isPushOk = s.Lpush(key, values)
 		}
 
-		return &resp.Integer{N: v}
+		if !isPushOk {
+			return &resp.Error{Msg: fmt.Sprintf("WRONGTYPE Operation against a key holding the wrong kind of value for %s command", cmd.Name)}
+		}
+
+		return &resp.Integer{N: len}
 	case LRANGE_COMMAND:
 		argsLen := len(cmd.Args)
 
@@ -224,9 +231,4 @@ func (c *Command) processArray(arr *resp.Array) error {
 	}
 
 	return nil
-}
-
-func getCommandName(name []byte) Name {
-	upper := strings.ToUpper(string(name))
-	return commandByName[upper]
 }

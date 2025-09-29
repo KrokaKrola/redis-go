@@ -1,5 +1,7 @@
 package commands
 
+import "strings"
+
 type Name string
 
 const (
@@ -9,6 +11,7 @@ const (
 	SET_COMMAND    Name = "SET"
 	RPUSH_COMMAND  Name = "RPUSH"
 	LRANGE_COMMAND Name = "LRANGE"
+	LPUSH_COMMAND  Name = "LPUSH"
 )
 
 var commandByName = map[string]Name{
@@ -18,4 +21,10 @@ var commandByName = map[string]Name{
 	string(SET_COMMAND):    SET_COMMAND,
 	string(RPUSH_COMMAND):  RPUSH_COMMAND,
 	string(LRANGE_COMMAND): LRANGE_COMMAND,
+	string(LPUSH_COMMAND):  LPUSH_COMMAND,
+}
+
+func getCommandName(name []byte) Name {
+	upper := strings.ToUpper(string(name))
+	return commandByName[upper]
 }

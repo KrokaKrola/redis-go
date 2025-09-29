@@ -1,6 +1,9 @@
 package store
 
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 type storeValue struct {
 	value      StoreValueType
@@ -87,6 +90,26 @@ func (m innerMap) append(key string, arr []string) (int64, bool) {
 	newArr := append(list.L, arr...)
 	m[key] = newStoreValue(List{L: newArr}, v.expiryTime)
 	return int64(len(newArr)), true
+}
+
+func (m innerMap) prepend(key string, arr []string) (int64, bool) {
+	v, ok := m[key]
+
+	if !ok || v.isExpired() {
+		slices.Reverse(arr)
+		m[key] = newStoreValue(List{L: arr}, getPossibleEndTime())
+		return int64(len(arr)), true
+	}
+
+	list, isList := v.value.(List)
+	if !isList {
+		return 0, false
+	}
+
+	slices.Reverse(arr)
+	arr = append(arr, list.L...)
+	m[key] = newStoreValue(List{L: arr}, v.expiryTime)
+	return int64(len(arr)), true
 }
 
 func (m innerMap) delete(key string) {

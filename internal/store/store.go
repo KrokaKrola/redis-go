@@ -57,11 +57,18 @@ func (s *Store) Set(key string, value []byte, expType ExpiryType, expiryTime int
 	return s.set(key, cpy, expType, expiryTime)
 }
 
-func (s *Store) Rpush(key string, value List) (int64, bool) {
+func (s *Store) Rpush(key string, value []string) (int64, bool) {
 	s.Lock()
 	defer s.Unlock()
-	cpy := append([]string{}, value.L...)
+	cpy := append([]string{}, value...)
 	return s.append(key, cpy)
+}
+
+func (s *Store) Lpush(key string, value []string) (int64, bool) {
+	s.Lock()
+	defer s.Unlock()
+	cpy := append([]string{}, value...)
+	return s.prepend(key, cpy)
 }
 
 func (s *Store) Delete(key string) {
