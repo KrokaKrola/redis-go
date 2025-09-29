@@ -265,7 +265,7 @@ func TestDispatch_LRANGE_Stop_Is_Greater_Than_List_Length(t *testing.T) {
 	}
 
 	if len(arr.Elems) != 4 {
-		t.Fatalf("expected resp.Array to be of length 2, got %d", len(arr.Elems))
+		t.Fatalf("expected resp.Array to be of length 4, got %d", len(arr.Elems))
 	}
 
 	var got []string
@@ -283,4 +283,75 @@ func TestDispatch_LRANGE_Stop_Is_Greater_Than_List_Length(t *testing.T) {
 	if !slices.Equal(want, got) {
 		t.Fatalf("unexpected LRANGE response, got %#v, want %#v", got, want)
 	}
+}
+
+// TestDispatch_LRANGE_NegativeRange confirms LRANGE returns valid list of elements for negative start stop values
+func TestDispatch_LRANGE_NegativeRange(t *testing.T) {
+	cases := []struct {
+		start string
+		stop  string
+		want  []string
+	}{
+		{start: "-2", stop: "-1", want: []string{"d", "e"}},
+		{start: "0", stop: "-3", want: []string{"a", "b", "c"}},
+		{start: "-7", stop: "-3", want: []string{"a", "b", "c"}},
+		{start: "0", stop: "-7", want: []string{}},
+	}
+
+	for _, v := range cases {
+		cmd := &Command{
+			Name: RPUSH_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{B: []byte("list_key")},
+				&resp.BulkString{B: []byte("a")},
+				&resp.BulkString{B: []byte("b")},
+				&resp.BulkString{B: []byte("c")},
+				&resp.BulkString{B: []byte("d")},
+				&resp.BulkString{B: []byte("e")},
+			},
+		}
+
+		store := store.NewStore()
+
+		out := Dispatch(cmd, store)
+
+		if _, ok := out.(*resp.Error); ok {
+			t.Fatalf("unexpected error, got %T", out)
+		}
+
+		cmd = &Command{
+			Name: LRANGE_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{B: []byte("list_key")},
+				&resp.BulkString{B: []byte(v.start)},
+				&resp.BulkString{B: []byte(v.stop)},
+			},
+		}
+
+		out = Dispatch(cmd, store)
+
+		arr, ok := out.(*resp.Array)
+		if !ok {
+			t.Fatalf("expected resp.Array, got %T", out)
+		}
+
+		if len(arr.Elems) != len(v.want) {
+			t.Fatalf("expected resp.Array={%#v}, got %#v", v.want, arr.Elems)
+		}
+
+		var got []string
+
+		for idx, v := range arr.Elems {
+			a, ok := v.(*resp.BulkString)
+			if !ok {
+				t.Fatalf("expected idx: %d element to be *resp.BulkString, got %T", idx, a)
+			}
+			got = append(got, string(a.B))
+		}
+
+		if !slices.Equal(v.want, got) {
+			t.Fatalf("unexpected LRANGE response, got %#v, want %#v", got, v.want)
+		}
+	}
+
 }

@@ -79,14 +79,14 @@ func (m innerMap) append(key string, arr []string) (int64, bool) {
 		return int64(len(arr)), true
 	}
 
-	switch it := v.value.(type) {
-	case List:
-		newArr := append(it.L, arr...)
-		m[key] = newStoreValue(List{L: newArr}, v.expiryTime)
-		return int64(len(newArr)), true
-	default:
+	list, isList := v.value.(List)
+	if !isList {
 		return 0, false
 	}
+
+	newArr := append(list.L, arr...)
+	m[key] = newStoreValue(List{L: newArr}, v.expiryTime)
+	return int64(len(newArr)), true
 }
 
 func (m innerMap) delete(key string) {

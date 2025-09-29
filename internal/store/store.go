@@ -73,11 +73,6 @@ func (s *Store) Delete(key string) {
 func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
 	s.RLock()
 
-	if start > stop {
-		s.RUnlock()
-		return List{Null: true}, true
-	}
-
 	storeList, ok, expired, wrongType := s.getList(key)
 
 	if wrongType {
@@ -107,6 +102,19 @@ func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
 
 	storeListLen := len(storeList.L)
 
+	if start < 0 {
+		start = max(storeListLen+start, 0)
+	}
+
+	if stop < 0 {
+		stop = max(storeListLen+stop, -1)
+	}
+
+	if start > stop {
+		s.RUnlock()
+		return List{Null: true}, true
+	}
+
 	if start >= storeListLen {
 		s.RUnlock()
 		return List{Null: true}, true
@@ -114,7 +122,7 @@ func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
 
 	stop += 1
 
-	if stop >= storeListLen {
+	if stop > storeListLen {
 		stop = storeListLen
 	}
 
