@@ -205,6 +205,22 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 		}
 
 		return resArray
+	case LLEN_COMMAND:
+		if len(cmd.Args) != 1 {
+			return &resp.Error{Msg: "ERR wrong number of arguments for LLEN command"}
+		}
+
+		key, ok := valueAsString(cmd.Args[0])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid key value for LLEN command"}
+		}
+
+		v, ok := s.Llen(key)
+		if !ok {
+			return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
+		}
+
+		return &resp.Integer{N: v}
 	default:
 		return &resp.Error{Msg: fmt.Sprintf("ERR unknown command name: %s", cmd.Name)}
 	}

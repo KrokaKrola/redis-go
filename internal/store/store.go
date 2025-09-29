@@ -137,3 +137,17 @@ func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
 
 	return List{L: storeList.L[start:stop]}, true
 }
+
+func (s *Store) Llen(key string) (length int64, ok bool) {
+	l, ok := s.Lrange(key, 0, -1)
+
+	if !ok {
+		return 0, false
+	}
+
+	if l.Null || len(l.L) == 0 {
+		return 0, true
+	}
+
+	return int64(len(l.L)), true
+}
