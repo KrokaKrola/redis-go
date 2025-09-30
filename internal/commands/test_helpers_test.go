@@ -8,6 +8,28 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
 
+func createListWithValues(t *testing.T, s *store.Store, key string, values []string) {
+	t.Helper()
+
+	args := []resp.Value{
+		&resp.BulkString{B: []byte(key)},
+	}
+
+	for _, v := range values {
+		args = append(args, &resp.BulkString{B: []byte(v)})
+	}
+
+	cmd := &Command{
+		Name: RPUSH_COMMAND,
+		Args: args,
+	}
+
+	out := Dispatch(cmd, s)
+	if _, ok := out.(*resp.Error); ok {
+		t.Fatalf("unexpected error, got %T", out)
+	}
+}
+
 func assertListEquals(t *testing.T, s *store.Store, key string, want []string) {
 	t.Helper()
 

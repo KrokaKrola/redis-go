@@ -191,7 +191,7 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 
 		v, ok := s.Lrange(key, start, stop)
 		if !ok {
-			return &resp.Error{Msg: "ERR LRANGE internal error"}
+			return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
 		}
 
 		if v.Null || len(v.L) == 0 {
@@ -215,12 +215,65 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 			return &resp.Error{Msg: "ERR invalid key value for LLEN command"}
 		}
 
-		v, ok := s.Llen(key)
+		v, ok := s.Lrange(key, 0, -1)
 		if !ok {
 			return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
 		}
 
-		return &resp.Integer{N: v}
+		if v.Null || len(v.L) == 0 {
+			return &resp.Integer{N: 0}
+		}
+
+		return &resp.Integer{N: int64(len(v.L))}
+	case LPOP_COMMAND:
+		argsLen := len(cmd.Args)
+		if argsLen == 0 || argsLen > 2 {
+			return &resp.Error{Msg: "ERR wrong number of arguments for LPOP command"}
+		}
+
+		key, ok := valueAsString(cmd.Args[0])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid key value for LPOP command"}
+		}
+
+		count := 1
+
+		if argsLen == 2 {
+			count, ok = valueAsInteger(cmd.Args[1])
+
+			if !ok {
+				return &resp.Error{Msg: "ERR invalid count value for LPOP command"}
+			}
+
+			if count <= 0 {
+				return &resp.Error{Msg: "ERR invalid count value for LPOP command"}
+			}
+		}
+
+		v, ok := s.Lpop(key, count)
+		if !ok {
+			return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
+		}
+
+		if v.Null || len(v.L) == 0 {
+			if count == 1 {
+				return &resp.BulkString{Null: true}
+			} else {
+				return &resp.Array{Null: true}
+			}
+		}
+
+		if count == 1 {
+			return &resp.BulkString{B: []byte(v.L[0])}
+		}
+
+		resArray := &resp.Array{}
+
+		for _, v := range v.L {
+			resArray.Elems = append(resArray.Elems, &resp.BulkString{B: []byte(v)})
+		}
+
+		return resArray
 	default:
 		return &resp.Error{Msg: fmt.Sprintf("ERR unknown command name: %s", cmd.Name)}
 	}
