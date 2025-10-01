@@ -274,6 +274,41 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 		}
 
 		return resArray
+	case BLPOP_COMMAND:
+		argsLen := len(cmd.Args)
+
+		if argsLen != 2 {
+			return &resp.Error{Msg: "ERR invalid number of arguments for BLPOP command"}
+		}
+
+		key, ok := valueAsString(cmd.Args[0])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid key value for BLPOP command"}
+		}
+
+		timeoutInSeconds, ok := valueAsInteger(cmd.Args[1])
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid timeout value for BLPOP command"}
+		}
+
+		if timeoutInSeconds < 0 {
+			return &resp.Error{Msg: "ERR invalid timeout value for BLPOP command"}
+		}
+
+		el, ok := s.Blpop(key, timeoutInSeconds)
+
+		if !ok {
+			return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
+		}
+
+		if el == "" {
+			return &resp.Array{Null: true}
+		}
+
+		return &resp.Array{Elems: []resp.Value{
+			&resp.BulkString{B: []byte(key)},
+			&resp.BulkString{B: []byte(el)},
+		}}
 	default:
 		return &resp.Error{Msg: fmt.Sprintf("ERR unknown command name: %s", cmd.Name)}
 	}
