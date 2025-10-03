@@ -15,4 +15,8 @@ type List struct {
 	Null bool
 }
 
+func (l List) IsEmpty() bool {
+	return l.Null || len(l.L) == 0
+}
+
 func (t List) isValue() {}

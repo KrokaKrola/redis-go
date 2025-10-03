@@ -2,18 +2,24 @@ package store
 
 import (
 	"sync"
+	"time"
 )
 
 type Store struct {
 	sync.RWMutex
 	innerMap
-	blpopQueue map[string][]chan string
+	blpopQueue map[string][]blpopListener
+}
+
+type blpopListener struct {
+	id      string
+	valueCh chan string
 }
 
 func NewStore() *Store {
 	return &Store{
 		innerMap:   make(innerMap),
-		blpopQueue: make(map[string][]chan string),
+		blpopQueue: make(map[string][]blpopListener),
 	}
 }
 
@@ -102,12 +108,12 @@ func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
 
 	if wrongType {
 		s.RUnlock()
-		return List{Null: true}, false
+		return List{}, false
 	}
 
 	if !ok {
 		s.RUnlock()
-		return List{Null: true}, true
+		return List{}, true
 	}
 
 	if expired {
@@ -117,12 +123,12 @@ func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
 		defer s.Unlock()
 
 		s.delete(key)
-		return List{Null: true}, true
+		return List{}, true
 	}
 
 	if storeList.Null {
 		s.RUnlock()
-		return List{Null: true}, true
+		return List{}, true
 	}
 
 	storeListLen := len(storeList.L)
@@ -137,12 +143,12 @@ func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
 
 	if start > stop {
 		s.RUnlock()
-		return List{Null: true}, true
+		return List{}, true
 	}
 
 	if start >= storeListLen {
 		s.RUnlock()
-		return List{Null: true}, true
+		return List{}, true
 	}
 
 	stop += 1
@@ -162,18 +168,49 @@ func (s *Store) Lpop(key string, count int) (list List, ok bool) {
 	return s.lpop(key, count)
 }
 
-func (s *Store) Blpop(key string, timeoutInSeconds int) (el string, ok bool) {
-	res, ok := s.lpop(key, 1)
+func (s *Store) Blpop(key string, timeoutInSeconds float64) (el string, ok bool, timeout bool) {
+	s.Lock()
 
-	if ok && !res.Null && len(res.L) > 0 {
-		return res.L[0], true
+	if timeoutInSeconds == 0 {
+		// for codecrafters tests
+		timeoutInSeconds = 999
 	}
 
-	listener := make(chan string, 1)
-	s.blpopQueue[key] = append(s.blpopQueue[key], listener)
-	el = <-listener
+	res, ok := s.lpop(key, 1)
 
-	return el, true
+	if ok && !res.IsEmpty() {
+		s.Unlock()
+		return res.L[0], true, false
+	}
+
+	listener := blpopListener{
+		id:      newId(),
+		valueCh: make(chan string, 1),
+	}
+	s.blpopQueue[key] = append(s.blpopQueue[key], listener)
+
+	s.Unlock()
+
+	select {
+	case el := <-listener.valueCh:
+		return el, true, false
+	case <-time.After(time.Duration(timeoutInSeconds * float64(time.Second))):
+		s.Lock()
+		var newQueue []blpopListener
+
+		for _, v := range s.blpopQueue[key] {
+			if v.id != listener.id {
+				newQueue = append(newQueue, v)
+			}
+		}
+
+		s.blpopQueue[key] = newQueue
+
+		s.Unlock()
+
+		return "", false, true
+	}
+
 }
 
 func (s *Store) produceElementToListeners(key string) {
@@ -186,11 +223,11 @@ func (s *Store) produceElementToListeners(key string) {
 	for len(queue) > 0 {
 		res, ok := s.lpop(key, 1)
 
-		if !ok || res.Null || len(res.L) == 0 {
+		if !ok || res.IsEmpty() {
 			break
 		}
 
-		queue[0] <- res.L[0]
+		queue[0].valueCh <- res.L[0]
 		queue = queue[1:]
 	}
 

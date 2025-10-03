@@ -50,9 +50,6 @@ func assertListEquals(t *testing.T, s *store.Store, key string, want []string) {
 	}
 
 	if len(want) == 0 {
-		if !arr.Null {
-			t.Fatalf("expected null array for empty expectation, got %#v", arr)
-		}
 		if len(arr.Elems) != 0 {
 			t.Fatalf("expected zero elements for empty expectation, got %d", len(arr.Elems))
 		}

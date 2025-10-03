@@ -41,7 +41,15 @@ func (e *Encoder) Write(v Value) error {
 			return err
 		}
 	case *Array:
-		if v.Null || len(v.Elems) == 0 {
+		if v.Null {
+			if _, err := fmt.Fprintf(e.w, "*-1\r\n"); err != nil {
+				return err
+			}
+
+			break
+		}
+
+		if len(v.Elems) == 0 {
 			if _, err := fmt.Fprintf(e.w, "*0\r\n"); err != nil {
 				return err
 			}

@@ -116,7 +116,7 @@ func TestDispatch_LPUSH_EmptyListError(t *testing.T) {
 		t.Fatalf("expected resp.Error for invalid amount of arguments, got %T", out)
 	}
 
-	assertListEquals(t, store, "list_key", nil)
+	assertListEquals(t, store, "list_key", []string{})
 }
 
 // TestDispatch_LPUSH_MissType ensures LPUSH returns a type error when the key already holds a non-list.

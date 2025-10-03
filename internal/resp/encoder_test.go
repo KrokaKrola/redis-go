@@ -104,13 +104,33 @@ func TestEncoder_Write_Array_Empty(t *testing.T) {
 
 	if err := enc.Write(&Array{
 		Elems: []Value{},
-		Null:  true,
+		Null:  false,
 	}); err != nil {
 		t.Fatalf("encoder.Write() returned error: %v", err)
 	}
 
 	got := buf.String()
 	want := "*0\r\n"
+	if got != want {
+		t.Fatalf("unexpected output: got %q, want %q", got, want)
+	}
+}
+
+// TestEncoder_Write_Array_Empty ensuges that an array
+// is encoded as a valid value if array is empty
+func TestEncoder_Write_Array_Null(t *testing.T) {
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	if err := enc.Write(&Array{
+		Elems: []Value{},
+		Null:  true,
+	}); err != nil {
+		t.Fatalf("encoder.Write() returned error: %v", err)
+	}
+
+	got := buf.String()
+	want := "*-1\r\n"
 	if got != want {
 		t.Fatalf("unexpected output: got %q, want %q", got, want)
 	}

@@ -141,8 +141,8 @@ func TestDispatch_LRANGE_No_Key(t *testing.T) {
 
 	out := Dispatch(cmd, store)
 
-	if arr := out.(*resp.Array); !arr.Null || len(arr.Elems) != 0 {
-		t.Fatalf("expected array to be Null length, got %#v", arr)
+	if arr := out.(*resp.Array); len(arr.Elems) != 0 && arr.Null == false {
+		t.Fatalf("expected array to be Zero length and not Null, got %#v", arr)
 	}
 }
 
@@ -181,8 +181,12 @@ func TestDispatch_LRANGE_Start_Greater_Than_List_Len(t *testing.T) {
 		t.Fatalf("expected resp.Array, got %T", out)
 	}
 
-	if len(arr.Elems) > 0 || !arr.Null {
+	if len(arr.Elems) > 0 || arr.Null {
 		t.Fatalf("expected resp.Array, to be zero length %#v", arr)
+	}
+
+	if arr.Null {
+		t.Fatalf("expected resp.Array, to be not nullable %#v", arr)
 	}
 }
 
@@ -221,8 +225,12 @@ func TestDispatch_LRANGE_Start_IsGreaterThanStop(t *testing.T) {
 		t.Fatalf("expected resp.Array, got %T", out)
 	}
 
-	if len(arr.Elems) > 0 || !arr.Null {
+	if len(arr.Elems) > 0 {
 		t.Fatalf("expected resp.Array, to be zero length %#v", arr)
+	}
+
+	if arr.Null {
+		t.Fatalf("expected resp.Array, to be not nullable %#v", arr)
 	}
 }
 

@@ -194,8 +194,12 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 			return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
 		}
 
-		if v.Null || len(v.L) == 0 {
+		if v.Null {
 			return &resp.Array{Null: true}
+		}
+
+		if len(v.L) == 0 {
+			return &resp.Array{}
 		}
 
 		resArray := &resp.Array{}
@@ -275,6 +279,7 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 
 		return resArray
 	case BLPOP_COMMAND:
+		// TODO: add support for array-like keys
 		argsLen := len(cmd.Args)
 
 		if argsLen != 2 {
@@ -286,7 +291,7 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 			return &resp.Error{Msg: "ERR invalid key value for BLPOP command"}
 		}
 
-		timeoutInSeconds, ok := valueAsInteger(cmd.Args[1])
+		timeoutInSeconds, ok := valueAsFloat(cmd.Args[1])
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid timeout value for BLPOP command"}
 		}
@@ -295,14 +300,14 @@ func Dispatch(cmd *Command, s *store.Store) resp.Value {
 			return &resp.Error{Msg: "ERR invalid timeout value for BLPOP command"}
 		}
 
-		el, ok := s.Blpop(key, timeoutInSeconds)
+		el, ok, timeout := s.Blpop(key, timeoutInSeconds)
+
+		if timeout {
+			return &resp.Array{Null: true}
+		}
 
 		if !ok {
 			return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
-		}
-
-		if el == "" {
-			return &resp.Array{Null: true}
 		}
 
 		return &resp.Array{Elems: []resp.Value{
