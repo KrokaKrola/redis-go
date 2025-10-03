@@ -331,8 +331,9 @@ func (c *Command) processArray(arr *resp.Array) error {
 	name := getCommandName(b)
 
 	if name == "" {
-		return fmt.Errorf("ERR something went wrong while getting command name, probably command name is not defined")
+		return fmt.Errorf("ERR unknown command name -> %s", b)
 	}
+
 	c.Name = name
 
 	if len(arr.Elems) > 1 {
