@@ -171,12 +171,12 @@ func (s *Store) Lpop(key string, count int) (list List, ok bool) {
 func (s *Store) Blpop(key string, timeoutInSeconds float64) (el string, ok bool, timeout bool) {
 	s.Lock()
 
-	if timeoutInSeconds == 0 {
-		// for codecrafters tests
-		timeoutInSeconds = 999
-	}
-
 	res, ok := s.lpop(key, 1)
+
+	if !ok {
+		s.Unlock()
+		return "", false, false
+	}
 
 	if ok && !res.IsEmpty() {
 		s.Unlock()
@@ -191,10 +191,15 @@ func (s *Store) Blpop(key string, timeoutInSeconds float64) (el string, ok bool,
 
 	s.Unlock()
 
+	timeoutCh := (<-chan time.Time)(nil)
+	if timeoutInSeconds > 0 {
+		timeoutCh = time.After(time.Duration(timeoutInSeconds * float64(time.Second)))
+	}
+
 	select {
 	case el := <-listener.valueCh:
 		return el, true, false
-	case <-time.After(time.Duration(timeoutInSeconds * float64(time.Second))):
+	case <-timeoutCh:
 		s.Lock()
 		var newQueue []blpopListener
 
