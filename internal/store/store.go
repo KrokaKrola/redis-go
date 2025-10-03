@@ -1,19 +1,20 @@
 package store
 
 import (
-	"fmt"
 	"sync"
-	"time"
 )
 
 type Store struct {
 	sync.RWMutex
 	innerMap
-	blpopQueue []string
+	blpopQueue map[string][]chan string
 }
 
 func NewStore() *Store {
-	return &Store{innerMap: make(innerMap)}
+	return &Store{
+		innerMap:   make(innerMap),
+		blpopQueue: make(map[string][]chan string),
+	}
 }
 
 func (s *Store) Get(key string) (value []byte, ok bool) {
@@ -63,15 +64,29 @@ func (s *Store) Set(key string, value []byte, expType ExpiryType, expiryTime int
 func (s *Store) Rpush(key string, value []string) (int64, bool) {
 	s.Lock()
 	defer s.Unlock()
+
 	cpy := append([]string{}, value...)
-	return s.append(key, cpy)
+	len, ok := s.append(key, cpy)
+
+	if ok {
+		s.produceElementToListeners(key)
+	}
+
+	return len, ok
 }
 
 func (s *Store) Lpush(key string, value []string) (int64, bool) {
 	s.Lock()
 	defer s.Unlock()
+
 	cpy := append([]string{}, value...)
-	return s.prepend(key, cpy)
+	len, ok := s.prepend(key, cpy)
+
+	if ok {
+		s.produceElementToListeners(key)
+	}
+
+	return len, ok
 }
 
 func (s *Store) Delete(key string) {
@@ -148,59 +163,41 @@ func (s *Store) Lpop(key string, count int) (list List, ok bool) {
 }
 
 func (s *Store) Blpop(key string, timeoutInSeconds int) (el string, ok bool) {
-	blpopId := newID()
+	res, ok := s.lpop(key, 1)
 
-	s.Lock()
-	s.blpopQueue = append(s.blpopQueue, blpopId)
-	s.Unlock()
-
-	for {
-		s.RLock()
-		l, ok, expired, wrongType := s.getList(key)
-
-		if wrongType {
-			s.RUnlock()
-			return "", false
-		}
-
-		if !ok || expired {
-			// wait until list will be created
-			s.RUnlock()
-			time.Sleep(10 * time.Millisecond)
-			continue
-		}
-
-		if l.Null || len(l.L) == 0 {
-			s.RUnlock()
-			time.Sleep(10 * time.Millisecond)
-			continue
-		}
-
-		if len(s.blpopQueue) > 0 && s.blpopQueue[0] != blpopId {
-			// item is waited by another client
-			s.RUnlock()
-			time.Sleep(10 * time.Millisecond)
-			continue
-		}
-
-		s.RUnlock()
-		s.Lock()
-		defer s.Unlock()
-
-		list, ok := s.lpop(key, 1)
-		fmt.Printf("for me %#v, ok: %t...\n", list, ok)
-		if !ok {
-			return "", false
-		}
-
-		s.blpopQueue = s.blpopQueue[1:]
-
-		// not sure if it's needed since it will be checked before
-		// if list.Null || len(list.L) == 0 {
-		// 	time.Sleep(10 * time.Millisecond)
-		// 	continue
-		// }
-
-		return list.L[0], true
+	if ok && !res.Null && len(res.L) > 0 {
+		return res.L[0], true
 	}
+
+	listener := make(chan string, 1)
+	s.blpopQueue[key] = append(s.blpopQueue[key], listener)
+	el = <-listener
+
+	return el, true
+}
+
+func (s *Store) produceElementToListeners(key string) {
+	queue, ok := s.blpopQueue[key]
+
+	if !ok || len(queue) == 0 {
+		return
+	}
+
+	for len(queue) > 0 {
+		res, ok := s.lpop(key, 1)
+
+		if !ok || res.Null || len(res.L) == 0 {
+			break
+		}
+
+		queue[0] <- res.L[0]
+		queue = queue[1:]
+	}
+
+	if len(queue) == 0 {
+		delete(s.blpopQueue, key)
+		return
+	}
+
+	s.blpopQueue[key] = queue
 }
