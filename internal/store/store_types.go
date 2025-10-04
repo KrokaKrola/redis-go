@@ -1,14 +1,16 @@
 package store
 
 type StoreValueType interface {
-	isValue()
+	GetType() string
 }
 
 type RawBytes struct {
 	B []byte
 }
 
-func (t RawBytes) isValue() {}
+func (t RawBytes) GetType() string {
+	return "string"
+}
 
 type List struct {
 	L    []string
@@ -19,4 +21,6 @@ func (l List) IsEmpty() bool {
 	return l.Null || len(l.L) == 0
 }
 
-func (t List) isValue() {}
+func (t List) GetType() string {
+	return "list"
+}

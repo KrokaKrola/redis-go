@@ -169,3 +169,17 @@ func (m innerMap) lpop(key string, count int) (list List, ok bool) {
 
 	return List{L: elems}, true
 }
+
+func (m innerMap) getRawValue(key string) (value StoreValueType, ok bool) {
+	sv, ok := m[key]
+
+	if !ok {
+		return nil, false
+	}
+
+	if sv.isExpired() {
+		delete(m, key)
+	}
+
+	return sv.value, true
+}

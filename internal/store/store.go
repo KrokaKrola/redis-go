@@ -243,3 +243,10 @@ func (s *Store) produceElementToListeners(key string) {
 
 	s.blpopQueue[key] = queue
 }
+
+func (s *Store) GetStoreRawValue(key string) (StoreValueType, bool) {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.getRawValue(key)
+}

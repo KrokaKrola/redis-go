@@ -15,6 +15,7 @@ const (
 	LLEN_COMMAND   Name = "LLEN"
 	LPOP_COMMAND   Name = "LPOP"
 	BLPOP_COMMAND  Name = "BLPOP"
+	TYPE_COMMAND   Name = "TYPE"
 )
 
 var commandByName = map[string]Name{
@@ -28,6 +29,7 @@ var commandByName = map[string]Name{
 	string(LLEN_COMMAND):   LLEN_COMMAND,
 	string(LPOP_COMMAND):   LPOP_COMMAND,
 	string(BLPOP_COMMAND):  BLPOP_COMMAND,
+	string(TYPE_COMMAND):   TYPE_COMMAND,
 }
 
 func getCommandName(name []byte) Name {
