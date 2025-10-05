@@ -37,8 +37,8 @@ func handleBlpop(cmd *Command, store *store.Store) resp.Value {
 		return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
 	}
 
-	return &resp.Array{Elems: []resp.Value{
-		&resp.BulkString{B: []byte(key)},
-		&resp.BulkString{B: []byte(el)},
+	return &resp.Array{Elements: []resp.Value{
+		&resp.BulkString{Bytes: []byte(key)},
+		&resp.BulkString{Bytes: []byte(el)},
 	}}
 }

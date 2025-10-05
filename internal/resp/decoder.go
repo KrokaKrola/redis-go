@@ -133,7 +133,7 @@ func (d *Decoder) processSimpleString() (*SimpleString, error) {
 			return nil, err
 		}
 
-		str.S = append(str.S, rByte)
+		str.Bytes = append(str.Bytes, rByte)
 	}
 
 	if err := d.readClrf(); err != nil {
@@ -166,13 +166,13 @@ func (d *Decoder) processArray() (*Array, error) {
 		return arr, nil
 	}
 
-	for arrSize > len(arr.Elems) {
+	for arrSize > len(arr.Elements) {
 		el, err := d.Read()
 		if err != nil {
 			return nil, err
 		}
 
-		arr.Elems = append(arr.Elems, el)
+		arr.Elements = append(arr.Elements, el)
 	}
 
 	return arr, nil
@@ -197,13 +197,13 @@ func (d *Decoder) processBulkString() (*BulkString, error) {
 
 	str := &BulkString{}
 
-	for len(str.B) < strSize {
+	for len(str.Bytes) < strSize {
 		b, err := d.r.ReadByte()
 		if err != nil {
 			return nil, err
 		}
 
-		str.B = append(str.B, b)
+		str.Bytes = append(str.Bytes, b)
 	}
 
 	if err := d.readClrf(); err != nil {
@@ -267,7 +267,7 @@ func (d *Decoder) processInteger() (*Integer, error) {
 		return nil, err
 	}
 
-	integer.N = res
+	integer.Number = res
 
 	if err := d.readClrf(); err != nil {
 		return nil, err

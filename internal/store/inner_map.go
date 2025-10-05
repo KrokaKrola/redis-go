@@ -39,7 +39,7 @@ func (m innerMap) get(key string) (value []byte, ok bool, expired bool) {
 		return nil, false, false
 	}
 
-	return rb.B, ok, false
+	return rb.Bytes, ok, false
 }
 
 func getPossibleEndTime() time.Time {
@@ -70,7 +70,7 @@ func (m innerMap) set(key string, value []byte, expType ExpiryType, expiryTime i
 		return false
 	}
 
-	m[key] = newStoreValue(RawBytes{B: value}, t)
+	m[key] = newStoreValue(RawBytes{Bytes: value}, t)
 	return true
 }
 
@@ -78,7 +78,7 @@ func (m innerMap) append(key string, arr []string) (int64, bool) {
 	v, ok := m[key]
 
 	if !ok || v.isExpired() {
-		m[key] = newStoreValue(List{L: arr}, getPossibleEndTime())
+		m[key] = newStoreValue(List{Elements: arr}, getPossibleEndTime())
 		return int64(len(arr)), true
 	}
 
@@ -87,8 +87,8 @@ func (m innerMap) append(key string, arr []string) (int64, bool) {
 		return 0, false
 	}
 
-	newArr := append(list.L, arr...)
-	m[key] = newStoreValue(List{L: newArr}, v.expiryTime)
+	newArr := append(list.Elements, arr...)
+	m[key] = newStoreValue(List{Elements: newArr}, v.expiryTime)
 	return int64(len(newArr)), true
 }
 
@@ -97,7 +97,7 @@ func (m innerMap) prepend(key string, arr []string) (int64, bool) {
 
 	if !ok || v.isExpired() {
 		slices.Reverse(arr)
-		m[key] = newStoreValue(List{L: arr}, getPossibleEndTime())
+		m[key] = newStoreValue(List{Elements: arr}, getPossibleEndTime())
 		return int64(len(arr)), true
 	}
 
@@ -107,8 +107,8 @@ func (m innerMap) prepend(key string, arr []string) (int64, bool) {
 	}
 
 	slices.Reverse(arr)
-	arr = append(arr, list.L...)
-	m[key] = newStoreValue(List{L: arr}, v.expiryTime)
+	arr = append(arr, list.Elements...)
+	m[key] = newStoreValue(List{Elements: arr}, v.expiryTime)
 	return int64(len(arr)), true
 }
 
@@ -152,22 +152,22 @@ func (m innerMap) lpop(key string, count int) (list List, ok bool) {
 		return List{Null: true}, false
 	}
 
-	if l.Null || len(l.L) == 0 {
+	if l.Null || len(l.Elements) == 0 {
 		return List{Null: true}, true
 	}
 
-	listLen := len(l.L)
+	listLen := len(l.Elements)
 
 	if count > listLen {
 		count = listLen
 	}
 
-	elems := l.L[:count]
-	newList := l.L[count:]
+	elems := l.Elements[:count]
+	newList := l.Elements[count:]
 
-	m[key] = newStoreValue(List{L: newList}, v.expiryTime)
+	m[key] = newStoreValue(List{Elements: newList}, v.expiryTime)
 
-	return List{L: elems}, true
+	return List{Elements: elems}, true
 }
 
 func (m innerMap) getRawValue(key string) (value StoreValueType, ok bool) {
@@ -179,6 +179,7 @@ func (m innerMap) getRawValue(key string) (value StoreValueType, ok bool) {
 
 	if sv.isExpired() {
 		delete(m, key)
+		return nil, false
 	}
 
 	return sv.value, true

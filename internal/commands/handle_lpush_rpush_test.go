@@ -12,8 +12,8 @@ func TestDispatch_LPUSH(t *testing.T) {
 	cmd := &Command{
 		Name: LPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("foo")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("foo")},
 		},
 	}
 
@@ -25,8 +25,8 @@ func TestDispatch_LPUSH(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", out)
 	}
 
-	if in.N != 1 {
-		t.Fatalf("unexpected LPUSH response, got %d, want %d", in.N, 1)
+	if in.Number != 1 {
+		t.Fatalf("unexpected LPUSH response, got %d, want %d", in.Number, 1)
 	}
 
 	assertListEquals(t, store, "list_key", []string{"foo"})
@@ -34,8 +34,8 @@ func TestDispatch_LPUSH(t *testing.T) {
 	cmd = &Command{
 		Name: LPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("bar")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("bar")},
 		},
 	}
 
@@ -45,8 +45,8 @@ func TestDispatch_LPUSH(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", out)
 	}
 
-	if in.N != 2 {
-		t.Fatalf("unexpected LPUSH response, got %d, want %d", in.N, 2)
+	if in.Number != 2 {
+		t.Fatalf("unexpected LPUSH response, got %d, want %d", in.Number, 2)
 	}
 
 	assertListEquals(t, store, "list_key", []string{"bar", "foo"})
@@ -57,10 +57,10 @@ func TestDispatch_LPUSH_MultipleElements(t *testing.T) {
 	cmd := &Command{
 		Name: LPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("foo")},
-			&resp.BulkString{B: []byte("bar")},
-			&resp.BulkString{B: []byte("baz")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("foo")},
+			&resp.BulkString{Bytes: []byte("bar")},
+			&resp.BulkString{Bytes: []byte("baz")},
 		},
 	}
 
@@ -72,8 +72,8 @@ func TestDispatch_LPUSH_MultipleElements(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", out)
 	}
 
-	if in.N != 3 {
-		t.Fatalf("unexpected LPUSH response, got %d, want %d", in.N, 3)
+	if in.Number != 3 {
+		t.Fatalf("unexpected LPUSH response, got %d, want %d", in.Number, 3)
 	}
 
 	assertListEquals(t, store, "list_key", []string{"baz", "bar", "foo"})
@@ -81,9 +81,9 @@ func TestDispatch_LPUSH_MultipleElements(t *testing.T) {
 	cmd = &Command{
 		Name: LPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("xyz")},
-			&resp.BulkString{B: []byte("qwerty")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("xyz")},
+			&resp.BulkString{Bytes: []byte("qwerty")},
 		},
 	}
 
@@ -93,8 +93,8 @@ func TestDispatch_LPUSH_MultipleElements(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", out)
 	}
 
-	if in.N != 5 {
-		t.Fatalf("unexpected LPUSH response, got %d, want %d", in.N, 5)
+	if in.Number != 5 {
+		t.Fatalf("unexpected LPUSH response, got %d, want %d", in.Number, 5)
 	}
 
 	assertListEquals(t, store, "list_key", []string{"qwerty", "xyz", "baz", "bar", "foo"})
@@ -105,7 +105,7 @@ func TestDispatch_LPUSH_EmptyListError(t *testing.T) {
 	cmd := &Command{
 		Name: LPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("list_key")},
 		},
 	}
 
@@ -124,8 +124,8 @@ func TestDispatch_LPUSH_MissType(t *testing.T) {
 	cmd := &Command{
 		Name: SET_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("mykey")},
-			&resp.BulkString{B: []byte("myval")},
+			&resp.BulkString{Bytes: []byte("mykey")},
+			&resp.BulkString{Bytes: []byte("myval")},
 		},
 	}
 
@@ -140,8 +140,8 @@ func TestDispatch_LPUSH_MissType(t *testing.T) {
 	cmd = &Command{
 		Name: LPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("mykey")},
-			&resp.BulkString{B: []byte("xyz")},
+			&resp.BulkString{Bytes: []byte("mykey")},
+			&resp.BulkString{Bytes: []byte("xyz")},
 		},
 	}
 
@@ -157,8 +157,8 @@ func TestDispatch_RPUSH(t *testing.T) {
 	cmd := &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("foo")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("foo")},
 		},
 	}
 
@@ -170,8 +170,8 @@ func TestDispatch_RPUSH(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", out)
 	}
 
-	if in.N != 1 {
-		t.Fatalf("unexpected RPUSH response, got %d, want %d", in.N, 1)
+	if in.Number != 1 {
+		t.Fatalf("unexpected RPUSH response, got %d, want %d", in.Number, 1)
 	}
 
 	assertListEquals(t, store, "list_key", []string{"foo"})
@@ -179,8 +179,8 @@ func TestDispatch_RPUSH(t *testing.T) {
 	cmd = &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("bar")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("bar")},
 		},
 	}
 
@@ -190,8 +190,8 @@ func TestDispatch_RPUSH(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", out)
 	}
 
-	if in.N != 2 {
-		t.Fatalf("unexpected RPUSH response, got %d, want %d", in.N, 2)
+	if in.Number != 2 {
+		t.Fatalf("unexpected RPUSH response, got %d, want %d", in.Number, 2)
 	}
 
 	assertListEquals(t, store, "list_key", []string{"foo", "bar"})
@@ -202,10 +202,10 @@ func TestDispatch_RPUSH_MultipleElements(t *testing.T) {
 	cmd := &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("foo")},
-			&resp.BulkString{B: []byte("bar")},
-			&resp.BulkString{B: []byte("baz")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("foo")},
+			&resp.BulkString{Bytes: []byte("bar")},
+			&resp.BulkString{Bytes: []byte("baz")},
 		},
 	}
 
@@ -217,8 +217,8 @@ func TestDispatch_RPUSH_MultipleElements(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", out)
 	}
 
-	if in.N != 3 {
-		t.Fatalf("unexpected RPUSH response, got %d, want %d", in.N, 3)
+	if in.Number != 3 {
+		t.Fatalf("unexpected RPUSH response, got %d, want %d", in.Number, 3)
 	}
 
 	assertListEquals(t, store, "list_key", []string{"foo", "bar", "baz"})
@@ -226,9 +226,9 @@ func TestDispatch_RPUSH_MultipleElements(t *testing.T) {
 	cmd = &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("xyz")},
-			&resp.BulkString{B: []byte("qwerty")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("xyz")},
+			&resp.BulkString{Bytes: []byte("qwerty")},
 		},
 	}
 
@@ -238,8 +238,8 @@ func TestDispatch_RPUSH_MultipleElements(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", out)
 	}
 
-	if in.N != 5 {
-		t.Fatalf("unexpected RPUSH response, got %d, want %d", in.N, 5)
+	if in.Number != 5 {
+		t.Fatalf("unexpected RPUSH response, got %d, want %d", in.Number, 5)
 	}
 
 	assertListEquals(t, store, "list_key", []string{"foo", "bar", "baz", "xyz", "qwerty"})
@@ -250,7 +250,7 @@ func TestDispatch_RPUSH_EmptyListError(t *testing.T) {
 	cmd := &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("list_key")},
 		},
 	}
 
@@ -269,8 +269,8 @@ func TestDispatch_RPUSH_MissType(t *testing.T) {
 	cmd := &Command{
 		Name: SET_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("mykey")},
-			&resp.BulkString{B: []byte("myval")},
+			&resp.BulkString{Bytes: []byte("mykey")},
+			&resp.BulkString{Bytes: []byte("myval")},
 		},
 	}
 
@@ -285,8 +285,8 @@ func TestDispatch_RPUSH_MissType(t *testing.T) {
 	cmd = &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("mykey")},
-			&resp.BulkString{B: []byte("xyz")},
+			&resp.BulkString{Bytes: []byte("mykey")},
+			&resp.BulkString{Bytes: []byte("xyz")},
 		},
 	}
 

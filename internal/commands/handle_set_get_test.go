@@ -13,10 +13,10 @@ import (
 // TestParse_SET_BulkStrings verifies that Parse accepts an array
 // with bulk-string command name "SET" and two bulk-string arguments.
 func TestParse_SET_BulkStrings(t *testing.T) {
-	input := &resp.Array{Elems: []resp.Value{
-		&resp.BulkString{B: []byte("SET")},
-		&resp.BulkString{B: []byte("mykey")},
-		&resp.BulkString{B: []byte("myval")},
+	input := &resp.Array{Elements: []resp.Value{
+		&resp.BulkString{Bytes: []byte("SET")},
+		&resp.BulkString{Bytes: []byte("mykey")},
+		&resp.BulkString{Bytes: []byte("myval")},
 	}}
 
 	cmd, perr := Parse(input)
@@ -33,10 +33,10 @@ func TestParse_SET_BulkStrings(t *testing.T) {
 		t.Fatalf("unexpected args length: got %d, want 2", len(cmd.Args))
 	}
 	// Validate args are preserved in order with expected values.
-	if bs, ok := cmd.Args[0].(*resp.BulkString); !ok || string(bs.B) != "mykey" {
+	if bs, ok := cmd.Args[0].(*resp.BulkString); !ok || string(bs.Bytes) != "mykey" {
 		t.Fatalf("unexpected first arg: %#v", cmd.Args[0])
 	}
-	if bs, ok := cmd.Args[1].(*resp.BulkString); !ok || string(bs.B) != "myval" {
+	if bs, ok := cmd.Args[1].(*resp.BulkString); !ok || string(bs.Bytes) != "myval" {
 		t.Fatalf("unexpected second arg: %#v", cmd.Args[1])
 	}
 }
@@ -44,9 +44,9 @@ func TestParse_SET_BulkStrings(t *testing.T) {
 // TestParse_GET_BulkString verifies that Parse accepts an array
 // with bulk-string command name "GET" and one bulk-string argument.
 func TestParse_GET_BulkString(t *testing.T) {
-	input := &resp.Array{Elems: []resp.Value{
-		&resp.BulkString{B: []byte("GET")},
-		&resp.BulkString{B: []byte("mykey")},
+	input := &resp.Array{Elements: []resp.Value{
+		&resp.BulkString{Bytes: []byte("GET")},
+		&resp.BulkString{Bytes: []byte("mykey")},
 	}}
 
 	cmd, perr := Parse(input)
@@ -62,7 +62,7 @@ func TestParse_GET_BulkString(t *testing.T) {
 	if len(cmd.Args) != 1 {
 		t.Fatalf("unexpected args length: got %d, want 1", len(cmd.Args))
 	}
-	if bs, ok := cmd.Args[0].(*resp.BulkString); !ok || string(bs.B) != "mykey" {
+	if bs, ok := cmd.Args[0].(*resp.BulkString); !ok || string(bs.Bytes) != "mykey" {
 		t.Fatalf("unexpected GET key arg: %#v", cmd.Args[0])
 	}
 }
@@ -76,14 +76,14 @@ func TestDispatch_SET_Then_GET_ReturnsValue(t *testing.T) {
 	setCmd := &Command{
 		Name: SET_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("mykey")},
-			&resp.BulkString{B: []byte("myval")},
-			&resp.BulkString{B: []byte("px")},
-			&resp.BulkString{B: []byte("100")},
+			&resp.BulkString{Bytes: []byte("mykey")},
+			&resp.BulkString{Bytes: []byte("myval")},
+			&resp.BulkString{Bytes: []byte("px")},
+			&resp.BulkString{Bytes: []byte("100")},
 		},
 	}
 	out1 := Dispatch(setCmd, s)
-	if ss, ok := out1.(*resp.SimpleString); !ok || string(ss.S) != "OK" {
+	if ss, ok := out1.(*resp.SimpleString); !ok || string(ss.Bytes) != "OK" {
 		t.Fatalf("expected +OK for SET, got %#v", out1)
 	}
 
@@ -91,7 +91,7 @@ func TestDispatch_SET_Then_GET_ReturnsValue(t *testing.T) {
 	getCmd := &Command{
 		Name: GET_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("mykey")},
+			&resp.BulkString{Bytes: []byte("mykey")},
 		},
 	}
 	out2 := Dispatch(getCmd, s)
@@ -102,8 +102,8 @@ func TestDispatch_SET_Then_GET_ReturnsValue(t *testing.T) {
 	if bs.Null {
 		t.Fatalf("expected non-null BulkString for existing key")
 	}
-	if string(bs.B) != "myval" {
-		t.Fatalf("unexpected value: got %q, want %q", string(bs.B), "myval")
+	if string(bs.Bytes) != "myval" {
+		t.Fatalf("unexpected value: got %q, want %q", string(bs.Bytes), "myval")
 	}
 }
 
@@ -126,14 +126,14 @@ func TestDispatch_SET_WithPXExpiry(t *testing.T) {
 	}
 
 	out := Dispatch(cmd, s)
-	if ss, ok := out.(*resp.SimpleString); !ok || string(ss.S) != "OK" {
+	if ss, ok := out.(*resp.SimpleString); !ok || string(ss.Bytes) != "OK" {
 		t.Fatalf("expected +OK for SET with PX, got %#v", out)
 	}
 
 	getCmd := &Command{
 		Name: GET_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("apple")},
+			&resp.BulkString{Bytes: []byte("apple")},
 		},
 	}
 
@@ -142,8 +142,8 @@ func TestDispatch_SET_WithPXExpiry(t *testing.T) {
 	if !ok || bs.Null {
 		t.Fatalf("expected BulkString for GET before expiry, got %#v", immediate)
 	}
-	if string(bs.B) != "mango" {
-		t.Fatalf("unexpected value before expiry: got %q, want %q", string(bs.B), "mango")
+	if string(bs.Bytes) != "mango" {
+		t.Fatalf("unexpected value before expiry: got %q, want %q", string(bs.Bytes), "mango")
 	}
 
 	time.Sleep(150 * time.Millisecond)
@@ -160,7 +160,7 @@ func TestDispatch_GET_Nonexistent_ReturnsNull(t *testing.T) {
 	s := store.NewStore()
 	getCmd := &Command{
 		Name: GET_COMMAND,
-		Args: []resp.Value{&resp.BulkString{B: []byte("missing")}},
+		Args: []resp.Value{&resp.BulkString{Bytes: []byte("missing")}},
 	}
 	out := Dispatch(getCmd, s)
 	bs, ok := out.(*resp.BulkString)

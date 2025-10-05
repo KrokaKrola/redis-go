@@ -61,11 +61,11 @@ func Parse(v resp.Value) (*Command, error) {
 func newCommandFromRespArray(arr *resp.Array) (*Command, error) {
 	cmd := &Command{}
 
-	if arr.Null || len(arr.Elems) == 0 {
+	if arr.Null || len(arr.Elements) == 0 {
 		return nil, fmt.Errorf("ERR invalid size of array")
 	}
 
-	b, ok := valueAsBytes(arr.Elems[0])
+	b, ok := valueAsBytes(arr.Elements[0])
 	if !ok {
 		return nil, fmt.Errorf("ERR protocol error")
 	}
@@ -77,8 +77,8 @@ func newCommandFromRespArray(arr *resp.Array) (*Command, error) {
 
 	cmd.Name = name
 
-	if len(arr.Elems) > 1 {
-		cmd.Args = append(cmd.Args, arr.Elems[1:]...)
+	if len(arr.Elements) > 1 {
+		cmd.Args = append(cmd.Args, arr.Elements[1:]...)
 	}
 
 	return cmd, nil

@@ -12,11 +12,11 @@ func createListWithValues(t *testing.T, s *store.Store, key string, values []str
 	t.Helper()
 
 	args := []resp.Value{
-		&resp.BulkString{B: []byte(key)},
+		&resp.BulkString{Bytes: []byte(key)},
 	}
 
 	for _, v := range values {
-		args = append(args, &resp.BulkString{B: []byte(v)})
+		args = append(args, &resp.BulkString{Bytes: []byte(v)})
 	}
 
 	cmd := &Command{
@@ -30,15 +30,57 @@ func createListWithValues(t *testing.T, s *store.Store, key string, values []str
 	}
 }
 
+func createKeyWithValueForIndefiniteTime(t *testing.T, store *store.Store, key string, value string) {
+	setCmd := &Command{
+		Name: SET_COMMAND,
+		Args: []resp.Value{
+			&resp.BulkString{Bytes: []byte(key)},
+			&resp.BulkString{Bytes: []byte(value)},
+		},
+	}
+
+	if out := Dispatch(setCmd, store); true {
+		ss, ok := out.(*resp.SimpleString)
+		if !ok {
+			t.Fatalf("expected *resp.SimpleString from SET, got %T", out)
+		}
+		if string(ss.Bytes) != "OK" {
+			t.Fatalf("unexpected SET response, got %q, want %q", string(ss.Bytes), "OK")
+		}
+	}
+}
+
+func createKeyWithValueForLimitedTime(t *testing.T, store *store.Store, key string, value string, expiryType string, expiryTime string) {
+	setCmd := &Command{
+		Name: SET_COMMAND,
+		Args: []resp.Value{
+			&resp.BulkString{Bytes: []byte(key)},
+			&resp.BulkString{Bytes: []byte(value)},
+			&resp.BulkString{Bytes: []byte(expiryType)},
+			&resp.BulkString{Bytes: []byte(expiryTime)},
+		},
+	}
+
+	if out := Dispatch(setCmd, store); true {
+		ss, ok := out.(*resp.SimpleString)
+		if !ok {
+			t.Fatalf("expected *resp.SimpleString from SET, got %T", out)
+		}
+		if string(ss.Bytes) != "OK" {
+			t.Fatalf("unexpected SET response, got %q, want %q", string(ss.Bytes), "OK")
+		}
+	}
+}
+
 func assertListEquals(t *testing.T, s *store.Store, key string, want []string) {
 	t.Helper()
 
 	cmd := &Command{
 		Name: LRANGE_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte(key)},
-			&resp.BulkString{B: []byte("0")},
-			&resp.BulkString{B: []byte("-1")},
+			&resp.BulkString{Bytes: []byte(key)},
+			&resp.BulkString{Bytes: []byte("0")},
+			&resp.BulkString{Bytes: []byte("-1")},
 		},
 	}
 
@@ -50,8 +92,8 @@ func assertListEquals(t *testing.T, s *store.Store, key string, want []string) {
 	}
 
 	if len(want) == 0 {
-		if len(arr.Elems) != 0 {
-			t.Fatalf("expected zero elements for empty expectation, got %d", len(arr.Elems))
+		if len(arr.Elements) != 0 {
+			t.Fatalf("expected zero elements for empty expectation, got %d", len(arr.Elements))
 		}
 		return
 	}
@@ -60,17 +102,17 @@ func assertListEquals(t *testing.T, s *store.Store, key string, want []string) {
 		t.Fatalf("expected non-null array response")
 	}
 
-	if len(arr.Elems) != len(want) {
-		t.Fatalf("expected %d elements, got %d", len(want), len(arr.Elems))
+	if len(arr.Elements) != len(want) {
+		t.Fatalf("expected %d elements, got %d", len(want), len(arr.Elements))
 	}
 
-	got := make([]string, 0, len(arr.Elems))
-	for idx, v := range arr.Elems {
+	got := make([]string, 0, len(arr.Elements))
+	for idx, v := range arr.Elements {
 		bs, ok := v.(*resp.BulkString)
 		if !ok {
 			t.Fatalf("expected *resp.BulkString at index %d, got %T", idx, v)
 		}
-		got = append(got, string(bs.B))
+		got = append(got, string(bs.Bytes))
 	}
 
 	if !slices.Equal(got, want) {

@@ -35,19 +35,19 @@ func TestDecoder_Read_PINGArray(t *testing.T) {
 	if arr.Null {
 		t.Fatalf("expected non-null array")
 	}
-	if len(arr.Elems) != 1 {
-		t.Fatalf("expected array length 1, got %d", len(arr.Elems))
+	if len(arr.Elements) != 1 {
+		t.Fatalf("expected array length 1, got %d", len(arr.Elements))
 	}
 
 	// Validate the single element is BulkString("PING")
-	elem := arr.Elems[0]
+	elem := arr.Elements[0]
 	switch bs := elem.(type) {
 	case *BulkString:
 		if bs.Null {
 			t.Fatalf("expected non-null bulk string")
 		}
-		if string(bs.B) != "PING" {
-			t.Fatalf("expected bulk string 'PING', got %q", string(bs.B))
+		if string(bs.Bytes) != "PING" {
+			t.Fatalf("expected bulk string 'PING', got %q", string(bs.Bytes))
 		}
 	default:
 		t.Fatalf("expected BulkString element, got %T", elem)
@@ -80,41 +80,41 @@ func TestDecoder_Read_ECHOArray(t *testing.T) {
 	if arr.Null {
 		t.Fatalf("expected non-null array")
 	}
-	if got := len(arr.Elems); got != 2 {
+	if got := len(arr.Elements); got != 2 {
 		t.Fatalf("expected array length 2, got %d", got)
 	}
 
 	// First element: command name "ECHO"
-	name := arr.Elems[0]
+	name := arr.Elements[0]
 	switch n := name.(type) {
 	case *BulkString:
 		if n.Null {
 			t.Fatalf("expected non-null bulk string for name")
 		}
-		if string(n.B) != "ECHO" {
-			t.Fatalf("expected command name 'ECHO', got %q", string(n.B))
+		if string(n.Bytes) != "ECHO" {
+			t.Fatalf("expected command name 'ECHO', got %q", string(n.Bytes))
 		}
 	case *SimpleString:
-		if string(n.S) != "ECHO" {
-			t.Fatalf("expected command name 'ECHO', got %q", string(n.S))
+		if string(n.Bytes) != "ECHO" {
+			t.Fatalf("expected command name 'ECHO', got %q", string(n.Bytes))
 		}
 	default:
 		t.Fatalf("expected string-like name, got %T", name)
 	}
 
 	// Second element: argument "hey"
-	arg := arr.Elems[1]
+	arg := arr.Elements[1]
 	switch bs := arg.(type) {
 	case *BulkString:
 		if bs.Null {
 			t.Fatalf("expected non-null bulk string for arg")
 		}
-		if string(bs.B) != "hey" {
-			t.Fatalf("expected arg 'hey', got %q", string(bs.B))
+		if string(bs.Bytes) != "hey" {
+			t.Fatalf("expected arg 'hey', got %q", string(bs.Bytes))
 		}
 	case *SimpleString:
-		if string(bs.S) != "hey" {
-			t.Fatalf("expected arg 'hey', got %q", string(bs.S))
+		if string(bs.Bytes) != "hey" {
+			t.Fatalf("expected arg 'hey', got %q", string(bs.Bytes))
 		}
 	default:
 		t.Fatalf("expected BulkString/SimpleString arg, got %T", arg)
@@ -149,8 +149,8 @@ func TestDecoder_Read_NullBulkStringThenSimpleString(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected second value SimpleString, got %T", v2)
 	}
-	if string(ss.S) != "OK" {
-		t.Fatalf("expected simple string 'OK', got %q", string(ss.S))
+	if string(ss.Bytes) != "OK" {
+		t.Fatalf("expected simple string 'OK', got %q", string(ss.Bytes))
 	}
 }
 
@@ -173,8 +173,8 @@ func TestDecoder_Read_BulkStringEmpty(t *testing.T) {
 	if bs.Null {
 		t.Fatalf("expected non-null bulk string for $0")
 	}
-	if len(bs.B) != 0 {
-		t.Fatalf("expected empty payload for $0, got %d bytes", len(bs.B))
+	if len(bs.Bytes) != 0 {
+		t.Fatalf("expected empty payload for $0, got %d bytes", len(bs.Bytes))
 	}
 }
 
@@ -195,8 +195,8 @@ func TestDecoder_Read_Integer(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", v)
 	}
 
-	if i.N != 5 {
-		t.Fatalf("expected integer with value 5, got value %d", i.N)
+	if i.Number != 5 {
+		t.Fatalf("expected integer with value 5, got value %d", i.Number)
 	}
 }
 
@@ -217,8 +217,8 @@ func TestDecoder_Read_Integer_WithOptionalPlusSign(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", v)
 	}
 
-	if i.N != 5 {
-		t.Fatalf("expected integer with value 5, got value %d", i.N)
+	if i.Number != 5 {
+		t.Fatalf("expected integer with value 5, got value %d", i.Number)
 	}
 }
 
@@ -239,8 +239,8 @@ func TestDecoder_Read_Integer_WithNegativeSign(t *testing.T) {
 		t.Fatalf("expected Integer, got %T", v)
 	}
 
-	if i.N != -5 {
-		t.Fatalf("expected integer with value 5 and IsNegative = true, got value %d", i.N)
+	if i.Number != -5 {
+		t.Fatalf("expected integer with value 5 and IsNegative = true, got value %d", i.Number)
 	}
 }
 
@@ -260,8 +260,8 @@ func TestDecoder_Read_IntegerFollowedBySimpleString(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected first value Integer, got %T", v1)
 	}
-	if i.N != 1 {
-		t.Fatalf("expected integer 1, got %d", i.N)
+	if i.Number != 1 {
+		t.Fatalf("expected integer 1, got %d", i.Number)
 	}
 
 	v2, err := dec.Read()
@@ -272,8 +272,8 @@ func TestDecoder_Read_IntegerFollowedBySimpleString(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected second value SimpleString, got %T", v2)
 	}
-	if string(ss.S) != "OK" {
-		t.Fatalf("expected simple string 'OK', got %q", string(ss.S))
+	if string(ss.Bytes) != "OK" {
+		t.Fatalf("expected simple string 'OK', got %q", string(ss.Bytes))
 	}
 }
 
@@ -309,8 +309,8 @@ func TestRESP_IntegerExtremesRoundTrip(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected Integer for %d, got %T", tc, v)
 		}
-		if i.N != tc {
-			t.Fatalf("expected integer %d, got %d", tc, i.N)
+		if i.Number != tc {
+			t.Fatalf("expected integer %d, got %d", tc, i.Number)
 		}
 
 		var buf bytes.Buffer

@@ -36,14 +36,14 @@ func handleLrange(cmd *Command, store *store.Store) resp.Value {
 		return &resp.Array{Null: true}
 	}
 
-	if len(v.L) == 0 {
+	if len(v.Elements) == 0 {
 		return &resp.Array{}
 	}
 
 	resArray := &resp.Array{}
 
-	for _, v := range v.L {
-		resArray.Elems = append(resArray.Elems, &resp.BulkString{B: []byte(v)})
+	for _, v := range v.Elements {
+		resArray.Elements = append(resArray.Elements, &resp.BulkString{Bytes: []byte(v)})
 	}
 
 	return resArray

@@ -30,13 +30,13 @@ func TestDispatch_Lpop(t *testing.T) {
 			isSingleElementRequested := true
 
 			args := []resp.Value{
-				&resp.BulkString{B: []byte(scenario.key)},
+				&resp.BulkString{Bytes: []byte(scenario.key)},
 			}
 
 			fmt.Printf("count: %s\n", scenario.count)
 
 			if scenario.count != "" {
-				args = append(args, &resp.BulkString{B: []byte(scenario.count)})
+				args = append(args, &resp.BulkString{Bytes: []byte(scenario.count)})
 				isSingleElementRequested = false
 			}
 
@@ -53,8 +53,8 @@ func TestDispatch_Lpop(t *testing.T) {
 					t.Fatalf("expected resp.BulkString for count=1, got %T", out)
 				}
 
-				if !slices.Equal(bs.B, []byte(scenario.wantLpopResponse[0])) {
-					t.Fatalf("unexpected LPOP response for count = 1, got %s, want %s", bs.B, scenario.wantLpopResponse[0])
+				if !slices.Equal(bs.Bytes, []byte(scenario.wantLpopResponse[0])) {
+					t.Fatalf("unexpected LPOP response for count = 1, got %s, want %s", bs.Bytes, scenario.wantLpopResponse[0])
 				}
 			} else {
 
@@ -65,12 +65,12 @@ func TestDispatch_Lpop(t *testing.T) {
 
 				got := []string{}
 
-				for _, v := range l.Elems {
+				for _, v := range l.Elements {
 					bs, ok := v.(*resp.BulkString)
 					if !ok {
 						t.Fatalf("expected resp.BulkString, got %T", out)
 					}
-					got = append(got, string(bs.B))
+					got = append(got, string(bs.Bytes))
 				}
 
 				if !slices.Equal(got, scenario.wantLpopResponse) {
@@ -89,7 +89,7 @@ func TestDispatch_Lpop_EmptyList(t *testing.T) {
 	cmd := &Command{
 		Name: LPOP_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("list_key")},
 		},
 	}
 
@@ -113,7 +113,7 @@ func TestDispatch_Lpop_Key_Doesnt_Exist(t *testing.T) {
 	cmd := &Command{
 		Name: LPOP_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("list_key")},
 		},
 	}
 
@@ -134,8 +134,8 @@ func TestDispatch_Lpop_Key_Wrong_Type(t *testing.T) {
 	cmd := &Command{
 		Name: SET_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("key")},
-			&resp.BulkString{B: []byte("value")},
+			&resp.BulkString{Bytes: []byte("key")},
+			&resp.BulkString{Bytes: []byte("value")},
 		},
 	}
 
@@ -147,7 +147,7 @@ func TestDispatch_Lpop_Key_Wrong_Type(t *testing.T) {
 	cmd = &Command{
 		Name: LPOP_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("key")},
+			&resp.BulkString{Bytes: []byte("key")},
 		},
 	}
 
@@ -174,8 +174,8 @@ func TestDispatch_Lpop_InvalidCount(t *testing.T) {
 			cmd := &Command{
 				Name: LPOP_COMMAND,
 				Args: []resp.Value{
-					&resp.BulkString{B: []byte("list_key")},
-					&resp.BulkString{B: []byte(scenario.count)},
+					&resp.BulkString{Bytes: []byte("list_key")},
+					&resp.BulkString{Bytes: []byte(scenario.count)},
 				},
 			}
 
@@ -201,7 +201,7 @@ func TestDispatch_Lpop_CountGreaterThanOneEmptyResult(t *testing.T) {
 		cmd := &Command{
 			Name: LPOP_COMMAND,
 			Args: []resp.Value{
-				&resp.BulkString{B: []byte("list_key")},
+				&resp.BulkString{Bytes: []byte("list_key")},
 			},
 		}
 
@@ -213,8 +213,8 @@ func TestDispatch_Lpop_CountGreaterThanOneEmptyResult(t *testing.T) {
 		cmd = &Command{
 			Name: LPOP_COMMAND,
 			Args: []resp.Value{
-				&resp.BulkString{B: []byte("list_key")},
-				&resp.BulkString{B: []byte("2")},
+				&resp.BulkString{Bytes: []byte("list_key")},
+				&resp.BulkString{Bytes: []byte("2")},
 			},
 		}
 
@@ -228,8 +228,8 @@ func TestDispatch_Lpop_CountGreaterThanOneEmptyResult(t *testing.T) {
 			t.Fatalf("expected null array for empty list")
 		}
 
-		if len(arr.Elems) != 0 {
-			t.Fatalf("expected zero elements for null array response, got %d", len(arr.Elems))
+		if len(arr.Elements) != 0 {
+			t.Fatalf("expected zero elements for null array response, got %d", len(arr.Elements))
 		}
 	})
 
@@ -238,8 +238,8 @@ func TestDispatch_Lpop_CountGreaterThanOneEmptyResult(t *testing.T) {
 		cmd := &Command{
 			Name: LPOP_COMMAND,
 			Args: []resp.Value{
-				&resp.BulkString{B: []byte("missing")},
-				&resp.BulkString{B: []byte("2")},
+				&resp.BulkString{Bytes: []byte("missing")},
+				&resp.BulkString{Bytes: []byte("2")},
 			},
 		}
 
@@ -253,8 +253,8 @@ func TestDispatch_Lpop_CountGreaterThanOneEmptyResult(t *testing.T) {
 			t.Fatalf("expected null array for missing key")
 		}
 
-		if len(arr.Elems) != 0 {
-			t.Fatalf("expected zero elements for null array response, got %d", len(arr.Elems))
+		if len(arr.Elements) != 0 {
+			t.Fatalf("expected zero elements for null array response, got %d", len(arr.Elements))
 		}
 	})
 }

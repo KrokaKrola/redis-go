@@ -47,5 +47,5 @@ func handlePush(cmd *Command, store *store.Store) resp.Value {
 		return &resp.Error{Msg: fmt.Sprintf("WRONGTYPE Operation against a key holding the wrong kind of value for %s command", cmd.Name)}
 	}
 
-	return &resp.Integer{N: len}
+	return &resp.Integer{Number: len}
 }

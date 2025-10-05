@@ -5,7 +5,7 @@ type StoreValueType interface {
 }
 
 type RawBytes struct {
-	B []byte
+	Bytes []byte
 }
 
 func (t RawBytes) GetType() string {
@@ -13,12 +13,12 @@ func (t RawBytes) GetType() string {
 }
 
 type List struct {
-	L    []string
-	Null bool
+	Elements []string
+	Null     bool
 }
 
 func (l List) IsEmpty() bool {
-	return l.Null || len(l.L) == 0
+	return l.Null || len(l.Elements) == 0
 }
 
 func (t List) GetType() string {

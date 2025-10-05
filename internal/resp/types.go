@@ -5,20 +5,20 @@ type Value interface {
 }
 
 type SimpleString struct {
-	S []byte
+	Bytes []byte
 }
 
 func (s *SimpleString) isValue() {}
 
 type BulkString struct {
-	B    []byte
-	Null bool
+	Bytes []byte
+	Null  bool
 }
 
 func (s *BulkString) isValue() {}
 
 type Integer struct {
-	N int64
+	Number int64
 }
 
 func (s *Integer) isValue() {}
@@ -30,8 +30,8 @@ type Error struct {
 func (s *Error) isValue() {}
 
 type Array struct {
-	Elems []Value
-	Null  bool
+	Elements []Value
+	Null     bool
 }
 
 func (s *Array) isValue() {}

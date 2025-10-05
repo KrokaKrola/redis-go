@@ -28,7 +28,7 @@ func TestEncoder_Write_BulkStringEmpty(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewEncoder(&buf)
 
-	if err := enc.Write(&BulkString{B: []byte("")}); err != nil {
+	if err := enc.Write(&BulkString{Bytes: []byte("")}); err != nil {
 		t.Fatalf("encoder.Write() returned error: %v", err)
 	}
 
@@ -45,7 +45,7 @@ func TestEncoder_Write_PositiveInteger(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewEncoder(&buf)
 
-	if err := enc.Write(&Integer{N: 5}); err != nil {
+	if err := enc.Write(&Integer{Number: 5}); err != nil {
 		t.Fatalf("encoder.Write() returned error: %v", err)
 	}
 
@@ -62,7 +62,7 @@ func TestEncoder_Write_NegativeInteger(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewEncoder(&buf)
 
-	if err := enc.Write(&Integer{N: -5}); err != nil {
+	if err := enc.Write(&Integer{Number: -5}); err != nil {
 		t.Fatalf("encoder.Write() returned error: %v", err)
 	}
 
@@ -80,10 +80,10 @@ func TestEncoder_Write_Array(t *testing.T) {
 	enc := NewEncoder(&buf)
 
 	if err := enc.Write(&Array{
-		Elems: []Value{
-			&BulkString{B: []byte("a")},
-			&BulkString{B: []byte("ab")},
-			&BulkString{B: []byte("abc")},
+		Elements: []Value{
+			&BulkString{Bytes: []byte("a")},
+			&BulkString{Bytes: []byte("ab")},
+			&BulkString{Bytes: []byte("abc")},
 		},
 	}); err != nil {
 		t.Fatalf("encoder.Write() returned error: %v", err)
@@ -103,8 +103,8 @@ func TestEncoder_Write_Array_Empty(t *testing.T) {
 	enc := NewEncoder(&buf)
 
 	if err := enc.Write(&Array{
-		Elems: []Value{},
-		Null:  false,
+		Elements: []Value{},
+		Null:     false,
 	}); err != nil {
 		t.Fatalf("encoder.Write() returned error: %v", err)
 	}
@@ -123,8 +123,8 @@ func TestEncoder_Write_Array_Null(t *testing.T) {
 	enc := NewEncoder(&buf)
 
 	if err := enc.Write(&Array{
-		Elems: []Value{},
-		Null:  true,
+		Elements: []Value{},
+		Null:     true,
 	}); err != nil {
 		t.Fatalf("encoder.Write() returned error: %v", err)
 	}
@@ -143,9 +143,9 @@ func TestEncoder_Write_Array_MissType(t *testing.T) {
 	enc := NewEncoder(&buf)
 
 	if err := enc.Write(&Array{
-		Elems: []Value{
-			&BulkString{B: []byte("a")},
-			&Integer{N: 5},
+		Elements: []Value{
+			&BulkString{Bytes: []byte("a")},
+			&Integer{Number: 5},
 		},
 	}); err == nil {
 		t.Fatalf("expected error for decoding invalid array type, got nil")

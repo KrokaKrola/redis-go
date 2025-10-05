@@ -22,8 +22,8 @@ func handleType(cmd *Command, store *store.Store) resp.Value {
 	sv, ok := store.GetStoreRawValue(key)
 
 	if !ok {
-		return &resp.SimpleString{S: []byte("none")}
+		return &resp.SimpleString{Bytes: []byte("none")}
 	}
 
-	return &resp.SimpleString{S: []byte(sv.GetType())}
+	return &resp.SimpleString{Bytes: []byte(sv.GetType())}
 }

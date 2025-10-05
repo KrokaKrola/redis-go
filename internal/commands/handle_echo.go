@@ -15,5 +15,5 @@ func handleEcho(cmd *Command, s *store.Store) resp.Value {
 		return &resp.Error{Msg: "ERR invalid argument for ECHO command"}
 	}
 
-	return &resp.BulkString{B: b}
+	return &resp.BulkString{Bytes: b}
 }

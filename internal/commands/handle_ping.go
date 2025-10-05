@@ -8,7 +8,7 @@ import (
 func handlePing(cmd *Command, s *store.Store) resp.Value {
 	argsLen := cmd.ArgsLen()
 	if argsLen == 0 {
-		return &resp.SimpleString{S: []byte("PONG")}
+		return &resp.SimpleString{Bytes: []byte("PONG")}
 	}
 
 	if argsLen == 1 {
@@ -17,7 +17,7 @@ func handlePing(cmd *Command, s *store.Store) resp.Value {
 			return &resp.Error{Msg: "ERR invalid argument for PING command"}
 		}
 
-		return &resp.BulkString{B: b}
+		return &resp.BulkString{Bytes: b}
 	}
 
 	return &resp.Error{Msg: "ERR Invalid arguments for PING command"}

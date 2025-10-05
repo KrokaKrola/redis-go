@@ -21,5 +21,5 @@ func handleGet(cmd *Command, store *store.Store) resp.Value {
 		return &resp.BulkString{Null: true}
 	}
 
-	return &resp.BulkString{B: v}
+	return &resp.BulkString{Bytes: v}
 }

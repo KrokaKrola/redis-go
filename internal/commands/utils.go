@@ -13,9 +13,9 @@ func valueAsBytes(v resp.Value) (value []byte, ok bool) {
 			return nil, false
 		}
 
-		return x.B, true
+		return x.Bytes, true
 	case *resp.SimpleString:
-		return x.S, true
+		return x.Bytes, true
 	default:
 		return nil, false
 	}
@@ -28,9 +28,9 @@ func valueAsString(v resp.Value) (value string, ok bool) {
 			return "", false
 		}
 
-		return string(x.B), true
+		return string(x.Bytes), true
 	case *resp.SimpleString:
-		return string(x.S), true
+		return string(x.Bytes), true
 	default:
 		return "", false
 	}
@@ -43,7 +43,7 @@ func valueAsInteger(v resp.Value) (value int, ok bool) {
 			return 0, false
 		}
 
-		v, err := strconv.Atoi(string(x.B))
+		v, err := strconv.Atoi(string(x.Bytes))
 
 		if err != nil {
 			return 0, false
@@ -51,7 +51,7 @@ func valueAsInteger(v resp.Value) (value int, ok bool) {
 
 		return v, true
 	case *resp.SimpleString:
-		v, err := strconv.Atoi(string(x.S))
+		v, err := strconv.Atoi(string(x.Bytes))
 
 		if err != nil {
 			return 0, false
@@ -70,7 +70,7 @@ func valueAsFloat(v resp.Value) (value float64, ok bool) {
 			return 0, false
 		}
 
-		v, err := strconv.ParseFloat(string(x.B), 64)
+		v, err := strconv.ParseFloat(string(x.Bytes), 64)
 
 		if err != nil {
 			return 0, false
@@ -78,7 +78,7 @@ func valueAsFloat(v resp.Value) (value float64, ok bool) {
 
 		return v, true
 	case *resp.SimpleString:
-		v, err := strconv.ParseFloat(string(x.S), 64)
+		v, err := strconv.ParseFloat(string(x.Bytes), 64)
 
 		if err != nil {
 			return 0, false

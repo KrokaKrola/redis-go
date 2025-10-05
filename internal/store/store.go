@@ -131,7 +131,7 @@ func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
 		return List{}, true
 	}
 
-	storeListLen := len(storeList.L)
+	storeListLen := len(storeList.Elements)
 
 	if start < 0 {
 		start = max(storeListLen+start, 0)
@@ -159,7 +159,7 @@ func (s *Store) Lrange(key string, start int, stop int) (list List, ok bool) {
 
 	s.RUnlock()
 
-	return List{L: storeList.L[start:stop]}, true
+	return List{Elements: storeList.Elements[start:stop]}, true
 }
 
 func (s *Store) Lpop(key string, count int) (list List, ok bool) {
@@ -180,7 +180,7 @@ func (s *Store) Blpop(key string, timeoutInSeconds float64) (el string, ok bool,
 
 	if ok && !res.IsEmpty() {
 		s.Unlock()
-		return res.L[0], true, false
+		return res.Elements[0], true, false
 	}
 
 	listener := blpopListener{
@@ -232,7 +232,7 @@ func (s *Store) produceElementToListeners(key string) {
 			break
 		}
 
-		queue[0].valueCh <- res.L[0]
+		queue[0].valueCh <- res.Elements[0]
 		queue = queue[1:]
 	}
 

@@ -13,12 +13,12 @@ func TestDispatch_LRANGE_Basic(t *testing.T) {
 	cmd := &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("a")},
-			&resp.BulkString{B: []byte("b")},
-			&resp.BulkString{B: []byte("c")},
-			&resp.BulkString{B: []byte("d")},
-			&resp.BulkString{B: []byte("e")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("a")},
+			&resp.BulkString{Bytes: []byte("b")},
+			&resp.BulkString{Bytes: []byte("c")},
+			&resp.BulkString{Bytes: []byte("d")},
+			&resp.BulkString{Bytes: []byte("e")},
 		},
 	}
 
@@ -33,9 +33,9 @@ func TestDispatch_LRANGE_Basic(t *testing.T) {
 	cmd = &Command{
 		Name: LRANGE_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("0")},
-			&resp.BulkString{B: []byte("1")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("0")},
+			&resp.BulkString{Bytes: []byte("1")},
 		},
 	}
 
@@ -46,18 +46,18 @@ func TestDispatch_LRANGE_Basic(t *testing.T) {
 		t.Fatalf("expected resp.Array, got %T", out)
 	}
 
-	if len(arr.Elems) != 2 {
-		t.Fatalf("expected resp.Array to be of length 2, got %d", len(arr.Elems))
+	if len(arr.Elements) != 2 {
+		t.Fatalf("expected resp.Array to be of length 2, got %d", len(arr.Elements))
 	}
 
 	var got []string
 
-	for idx, v := range arr.Elems {
+	for idx, v := range arr.Elements {
 		a, ok := v.(*resp.BulkString)
 		if !ok {
 			t.Fatalf("expected idx: %d element to be *resp.BulkString, got %T", idx, a)
 		}
-		got = append(got, string(a.B))
+		got = append(got, string(a.Bytes))
 	}
 
 	want := []string{"a", "b"}
@@ -72,12 +72,12 @@ func TestDispatch_LRANGE_Another_Basic(t *testing.T) {
 	cmd := &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("a")},
-			&resp.BulkString{B: []byte("b")},
-			&resp.BulkString{B: []byte("c")},
-			&resp.BulkString{B: []byte("d")},
-			&resp.BulkString{B: []byte("e")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("a")},
+			&resp.BulkString{Bytes: []byte("b")},
+			&resp.BulkString{Bytes: []byte("c")},
+			&resp.BulkString{Bytes: []byte("d")},
+			&resp.BulkString{Bytes: []byte("e")},
 		},
 	}
 
@@ -92,9 +92,9 @@ func TestDispatch_LRANGE_Another_Basic(t *testing.T) {
 	cmd = &Command{
 		Name: LRANGE_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("2")},
-			&resp.BulkString{B: []byte("4")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("2")},
+			&resp.BulkString{Bytes: []byte("4")},
 		},
 	}
 
@@ -105,18 +105,18 @@ func TestDispatch_LRANGE_Another_Basic(t *testing.T) {
 		t.Fatalf("expected resp.Array, got %T", out)
 	}
 
-	if len(arr.Elems) != 3 {
-		t.Fatalf("expected resp.Array to be of length 2, got %d", len(arr.Elems))
+	if len(arr.Elements) != 3 {
+		t.Fatalf("expected resp.Array to be of length 2, got %d", len(arr.Elements))
 	}
 
 	var got []string
 
-	for idx, v := range arr.Elems {
+	for idx, v := range arr.Elements {
 		a, ok := v.(*resp.BulkString)
 		if !ok {
 			t.Fatalf("expected idx: %d element to be *resp.BulkString, got %T", idx, a)
 		}
-		got = append(got, string(a.B))
+		got = append(got, string(a.Bytes))
 	}
 
 	want := []string{"c", "d", "e"}
@@ -131,9 +131,9 @@ func TestDispatch_LRANGE_No_Key(t *testing.T) {
 	cmd := &Command{
 		Name: LRANGE_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("2")},
-			&resp.BulkString{B: []byte("4")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("2")},
+			&resp.BulkString{Bytes: []byte("4")},
 		},
 	}
 
@@ -141,7 +141,7 @@ func TestDispatch_LRANGE_No_Key(t *testing.T) {
 
 	out := Dispatch(cmd, store)
 
-	if arr := out.(*resp.Array); len(arr.Elems) != 0 && arr.Null == false {
+	if arr := out.(*resp.Array); len(arr.Elements) != 0 && arr.Null == false {
 		t.Fatalf("expected array to be Zero length and not Null, got %#v", arr)
 	}
 }
@@ -151,9 +151,9 @@ func TestDispatch_LRANGE_Start_Greater_Than_List_Len(t *testing.T) {
 	cmd := &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("a")},
-			&resp.BulkString{B: []byte("b")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("a")},
+			&resp.BulkString{Bytes: []byte("b")},
 		},
 	}
 
@@ -168,9 +168,9 @@ func TestDispatch_LRANGE_Start_Greater_Than_List_Len(t *testing.T) {
 	cmd = &Command{
 		Name: LRANGE_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("2")},
-			&resp.BulkString{B: []byte("2")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("2")},
+			&resp.BulkString{Bytes: []byte("2")},
 		},
 	}
 
@@ -181,7 +181,7 @@ func TestDispatch_LRANGE_Start_Greater_Than_List_Len(t *testing.T) {
 		t.Fatalf("expected resp.Array, got %T", out)
 	}
 
-	if len(arr.Elems) > 0 || arr.Null {
+	if len(arr.Elements) > 0 || arr.Null {
 		t.Fatalf("expected resp.Array, to be zero length %#v", arr)
 	}
 
@@ -195,9 +195,9 @@ func TestDispatch_LRANGE_Start_IsGreaterThanStop(t *testing.T) {
 	cmd := &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("a")},
-			&resp.BulkString{B: []byte("b")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("a")},
+			&resp.BulkString{Bytes: []byte("b")},
 		},
 	}
 
@@ -212,9 +212,9 @@ func TestDispatch_LRANGE_Start_IsGreaterThanStop(t *testing.T) {
 	cmd = &Command{
 		Name: LRANGE_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("3")},
-			&resp.BulkString{B: []byte("2")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("3")},
+			&resp.BulkString{Bytes: []byte("2")},
 		},
 	}
 
@@ -225,7 +225,7 @@ func TestDispatch_LRANGE_Start_IsGreaterThanStop(t *testing.T) {
 		t.Fatalf("expected resp.Array, got %T", out)
 	}
 
-	if len(arr.Elems) > 0 {
+	if len(arr.Elements) > 0 {
 		t.Fatalf("expected resp.Array, to be zero length %#v", arr)
 	}
 
@@ -239,12 +239,12 @@ func TestDispatch_LRANGE_Stop_Is_Greater_Than_List_Length(t *testing.T) {
 	cmd := &Command{
 		Name: RPUSH_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("a")},
-			&resp.BulkString{B: []byte("b")},
-			&resp.BulkString{B: []byte("c")},
-			&resp.BulkString{B: []byte("d")},
-			&resp.BulkString{B: []byte("e")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("a")},
+			&resp.BulkString{Bytes: []byte("b")},
+			&resp.BulkString{Bytes: []byte("c")},
+			&resp.BulkString{Bytes: []byte("d")},
+			&resp.BulkString{Bytes: []byte("e")},
 		},
 	}
 
@@ -259,9 +259,9 @@ func TestDispatch_LRANGE_Stop_Is_Greater_Than_List_Length(t *testing.T) {
 	cmd = &Command{
 		Name: LRANGE_COMMAND,
 		Args: []resp.Value{
-			&resp.BulkString{B: []byte("list_key")},
-			&resp.BulkString{B: []byte("1")},
-			&resp.BulkString{B: []byte("10")},
+			&resp.BulkString{Bytes: []byte("list_key")},
+			&resp.BulkString{Bytes: []byte("1")},
+			&resp.BulkString{Bytes: []byte("10")},
 		},
 	}
 
@@ -272,18 +272,18 @@ func TestDispatch_LRANGE_Stop_Is_Greater_Than_List_Length(t *testing.T) {
 		t.Fatalf("expected resp.Array, got %T", out)
 	}
 
-	if len(arr.Elems) != 4 {
-		t.Fatalf("expected resp.Array to be of length 4, got %d", len(arr.Elems))
+	if len(arr.Elements) != 4 {
+		t.Fatalf("expected resp.Array to be of length 4, got %d", len(arr.Elements))
 	}
 
 	var got []string
 
-	for idx, v := range arr.Elems {
+	for idx, v := range arr.Elements {
 		a, ok := v.(*resp.BulkString)
 		if !ok {
 			t.Fatalf("expected idx: %d element to be *resp.BulkString, got %T", idx, a)
 		}
-		got = append(got, string(a.B))
+		got = append(got, string(a.Bytes))
 	}
 
 	want := []string{"b", "c", "d", "e"}
@@ -310,12 +310,12 @@ func TestDispatch_LRANGE_NegativeRange(t *testing.T) {
 		cmd := &Command{
 			Name: RPUSH_COMMAND,
 			Args: []resp.Value{
-				&resp.BulkString{B: []byte("list_key")},
-				&resp.BulkString{B: []byte("a")},
-				&resp.BulkString{B: []byte("b")},
-				&resp.BulkString{B: []byte("c")},
-				&resp.BulkString{B: []byte("d")},
-				&resp.BulkString{B: []byte("e")},
+				&resp.BulkString{Bytes: []byte("list_key")},
+				&resp.BulkString{Bytes: []byte("a")},
+				&resp.BulkString{Bytes: []byte("b")},
+				&resp.BulkString{Bytes: []byte("c")},
+				&resp.BulkString{Bytes: []byte("d")},
+				&resp.BulkString{Bytes: []byte("e")},
 			},
 		}
 
@@ -330,9 +330,9 @@ func TestDispatch_LRANGE_NegativeRange(t *testing.T) {
 		cmd = &Command{
 			Name: LRANGE_COMMAND,
 			Args: []resp.Value{
-				&resp.BulkString{B: []byte("list_key")},
-				&resp.BulkString{B: []byte(v.start)},
-				&resp.BulkString{B: []byte(v.stop)},
+				&resp.BulkString{Bytes: []byte("list_key")},
+				&resp.BulkString{Bytes: []byte(v.start)},
+				&resp.BulkString{Bytes: []byte(v.stop)},
 			},
 		}
 
@@ -343,18 +343,18 @@ func TestDispatch_LRANGE_NegativeRange(t *testing.T) {
 			t.Fatalf("expected resp.Array, got %T", out)
 		}
 
-		if len(arr.Elems) != len(v.want) {
-			t.Fatalf("expected resp.Array={%#v}, got %#v", v.want, arr.Elems)
+		if len(arr.Elements) != len(v.want) {
+			t.Fatalf("expected resp.Array={%#v}, got %#v", v.want, arr.Elements)
 		}
 
 		var got []string
 
-		for idx, v := range arr.Elems {
+		for idx, v := range arr.Elements {
 			a, ok := v.(*resp.BulkString)
 			if !ok {
 				t.Fatalf("expected idx: %d element to be *resp.BulkString, got %T", idx, a)
 			}
-			got = append(got, string(a.B))
+			got = append(got, string(a.Bytes))
 		}
 
 		if !slices.Equal(v.want, got) {

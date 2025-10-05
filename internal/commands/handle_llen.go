@@ -20,9 +20,9 @@ func handleLlen(cmd *Command, store *store.Store) resp.Value {
 		return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
 	}
 
-	if v.Null || len(v.L) == 0 {
-		return &resp.Integer{N: 0}
+	if v.Null || len(v.Elements) == 0 {
+		return &resp.Integer{Number: 0}
 	}
 
-	return &resp.Integer{N: int64(len(v.L))}
+	return &resp.Integer{Number: int64(len(v.Elements))}
 }

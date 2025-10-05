@@ -59,5 +59,5 @@ func handleSet(cmd *Command, store *store.Store) resp.Value {
 		return &resp.Error{Msg: "ERR during executing store SET command"}
 	}
 
-	return &resp.SimpleString{S: []byte("OK")}
+	return &resp.SimpleString{Bytes: []byte("OK")}
 }
