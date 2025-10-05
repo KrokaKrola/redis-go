@@ -21,6 +21,19 @@ func (l List) IsEmpty() bool {
 	return l.Null || len(l.Elements) == 0
 }
 
-func (t List) GetType() string {
+func (l List) GetType() string {
 	return "list"
+}
+
+type Stream struct {
+	Elements []streamElement
+}
+
+type streamElement struct {
+	id     string
+	fields [][]string
+}
+
+func (s Stream) GetType() string {
+	return "stream"
 }

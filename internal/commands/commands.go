@@ -98,6 +98,7 @@ var handlers = map[Name]handlerFn{
 	LPOP_COMMAND:   handleLpop,
 	BLPOP_COMMAND:  handleBlpop,
 	TYPE_COMMAND:   handleType,
+	XADD_COMMAND:   handleXadd,
 }
 
 func Dispatch(cmd *Command, s *store.Store) resp.Value {

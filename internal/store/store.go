@@ -250,3 +250,10 @@ func (s *Store) GetStoreRawValue(key string) (StoreValueType, bool) {
 
 	return s.getRawValue(key)
 }
+
+func (s *Store) Xadd(key string, id string, fields [][]string) (newEntryId string, ok bool, wrongType bool) {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.xadd(key, id, fields)
+}

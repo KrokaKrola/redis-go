@@ -184,3 +184,28 @@ func (m innerMap) getRawValue(key string) (value StoreValueType, ok bool) {
 
 	return sv.value, true
 }
+
+func (m innerMap) xadd(key string, id string, fields [][]string) (newEntryId string, ok bool, wrongType bool) {
+	sv, ok := m[key]
+
+	if !ok || sv.isExpired() {
+		m[key] = newStoreValue(Stream{
+			Elements: []streamElement{{id, fields}},
+		}, getPossibleEndTime())
+
+		return id, true, false
+	}
+
+	strValue, okStrValue := sv.value.(Stream)
+	if !okStrValue {
+		return "", false, true
+	}
+
+	newElements := append(strValue.Elements, streamElement{id, fields})
+
+	m[key] = newStoreValue(Stream{
+		Elements: newElements,
+	}, sv.expiryTime)
+
+	return id, true, false
+}
