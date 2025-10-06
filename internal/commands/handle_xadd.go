@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
@@ -20,6 +23,16 @@ func handleXadd(cmd *Command, store *store.Store) resp.Value {
 	streamEntryId, ok := cmd.ArgString(1)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid stream-id value for XADD command"}
+	}
+
+	msTime, seqNumber, ok := parseStreamId(streamEntryId)
+
+	if !ok {
+		return &resp.Error{Msg: "ERR invalid stream-id value for XADD command"}
+	}
+
+	if msTime == 0 && seqNumber == 0 {
+		return &resp.Error{Msg: "ERR The ID specified in XADD must be greater than 0-0"}
 	}
 
 	restArgs := cmd.Args[2:]
@@ -44,15 +57,31 @@ func handleXadd(cmd *Command, store *store.Store) resp.Value {
 		fields = append(fields, []string{entryKey, entryValue})
 	}
 
-	id, ok, wrongType := store.Xadd(key, streamEntryId, fields)
+	id, err := store.Xadd(key, msTime, seqNumber, fields)
 
-	if wrongType {
-		return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
-	}
-
-	if !ok {
-		return &resp.Error{Msg: "ERR internal XADD command error"}
+	if err != nil {
+		return &resp.Error{Msg: err.Error()}
 	}
 
 	return &resp.BulkString{Bytes: []byte(id)}
+}
+
+func parseStreamId(id string) (msTime uint64, sequenceNumber uint64, ok bool) {
+	before, after, found := strings.Cut(id, "-")
+
+	if !found {
+		return 0, 0, false
+	}
+
+	msTime, err := strconv.ParseUint(before, 10, 64)
+	if err != nil {
+		return 0, 0, false
+	}
+
+	sequenceNumber, err = strconv.ParseUint(after, 10, 64)
+	if err != nil {
+		return 0, 0, false
+	}
+
+	return msTime, sequenceNumber, true
 }

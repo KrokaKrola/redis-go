@@ -1,6 +1,8 @@
 package store
 
 import (
+	"errors"
+	"fmt"
 	"slices"
 	"time"
 )
@@ -185,27 +187,66 @@ func (m innerMap) getRawValue(key string) (value StoreValueType, ok bool) {
 	return sv.value, true
 }
 
-func (m innerMap) xadd(key string, id string, fields [][]string) (newEntryId string, ok bool, wrongType bool) {
+func (m innerMap) xadd(key string, msTime uint64, seqNumber uint64, fields [][]string) (newEntryId string, err error) {
 	sv, ok := m[key]
+
+	fields = cloneStreamFields(fields)
+
+	id := fmt.Sprintf("%d-%d", msTime, seqNumber)
 
 	if !ok || sv.isExpired() {
 		m[key] = newStoreValue(Stream{
-			Elements: []streamElement{{id, fields}},
+			Elements:           []streamElement{{id, fields}},
+			LtsInsertedIdParts: streamIdParts{msTime, seqNumber},
 		}, getPossibleEndTime())
 
-		return id, true, false
+		return id, nil
 	}
 
-	strValue, okStrValue := sv.value.(Stream)
-	if !okStrValue {
-		return "", false, true
+	stream, okStream := sv.value.(Stream)
+	if !okStream {
+		return "", errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
 	}
 
-	newElements := append(strValue.Elements, streamElement{id, fields})
+	if isValidStreamId := validateStreamIdParts(msTime, seqNumber, stream.LtsInsertedIdParts); !isValidStreamId {
+		return "", fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+	}
+
+	newElements := append(stream.Elements, streamElement{id, fields})
 
 	m[key] = newStoreValue(Stream{
-		Elements: newElements,
+		Elements:           newElements,
+		LtsInsertedIdParts: streamIdParts{msTime, seqNumber},
 	}, sv.expiryTime)
 
-	return id, true, false
+	return id, nil
+}
+
+func cloneStreamFields(fields [][]string) [][]string {
+	if len(fields) == 0 {
+		return nil
+	}
+
+	out := make([][]string, len(fields))
+	for i, pair := range fields {
+		copied := make([]string, len(pair))
+		copy(copied, pair)
+		out[i] = copied
+	}
+
+	return out
+}
+
+func validateStreamIdParts(msTime uint64, seqNumber uint64, ltsInsertedIdParts streamIdParts) bool {
+	if msTime < ltsInsertedIdParts.msTime {
+		return false
+	}
+
+	if msTime == ltsInsertedIdParts.msTime {
+		if seqNumber <= ltsInsertedIdParts.seqNumber {
+			return false
+		}
+	}
+
+	return true
 }
