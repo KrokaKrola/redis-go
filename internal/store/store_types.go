@@ -31,7 +31,7 @@ type Stream struct {
 }
 
 type streamElement struct {
-	id     string
+	id     streamIdParts
 	fields [][]string
 }
 

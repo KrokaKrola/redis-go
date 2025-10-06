@@ -187,20 +187,20 @@ func (m innerMap) getRawValue(key string) (value StoreValueType, ok bool) {
 	return sv.value, true
 }
 
-func (m innerMap) xadd(key string, msTime uint64, seqNumber uint64, fields [][]string) (newEntryId string, err error) {
+func (m innerMap) xadd(key string, msTime uint64, seqNumber uint64, isAutogenSeqNumber bool, isAutogen bool, fields [][]string) (newEntryId string, err error) {
 	sv, ok := m[key]
 
 	fields = cloneStreamFields(fields)
 
-	id := fmt.Sprintf("%d-%d", msTime, seqNumber)
-
 	if !ok || sv.isExpired() {
+		msTime, seqNumber = getNewStreamId(msTime, seqNumber, isAutogenSeqNumber, isAutogen)
+
 		m[key] = newStoreValue(Stream{
-			Elements:           []streamElement{{id, fields}},
+			Elements:           []streamElement{{id: streamIdParts{msTime, seqNumber}, fields: fields}},
 			LtsInsertedIdParts: streamIdParts{msTime, seqNumber},
 		}, getPossibleEndTime())
 
-		return id, nil
+		return fmt.Sprintf("%d-%d", msTime, seqNumber), nil
 	}
 
 	stream, okStream := sv.value.(Stream)
@@ -208,18 +208,44 @@ func (m innerMap) xadd(key string, msTime uint64, seqNumber uint64, fields [][]s
 		return "", errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
 	}
 
-	if isValidStreamId := validateStreamIdParts(msTime, seqNumber, stream.LtsInsertedIdParts); !isValidStreamId {
+	if isValidStreamId := validateStreamIdParts(msTime, seqNumber, stream.LtsInsertedIdParts, isAutogenSeqNumber, isAutogen); !isValidStreamId {
 		return "", fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
 	}
 
-	newElements := append(stream.Elements, streamElement{id, fields})
+	if isAutogenSeqNumber {
+		if msTime != stream.LtsInsertedIdParts.msTime {
+			seqNumber = 0
+		} else {
+			seqNumber = stream.LtsInsertedIdParts.seqNumber + 1
+		}
+	} else if isAutogen {
+		msTime = uint64(time.Now().Unix())
+
+		var elementWithSameMsTime streamElement
+		found := false
+		for _, v := range stream.Elements {
+			if v.id.msTime == msTime {
+				elementWithSameMsTime = v
+				found = true
+				break
+			}
+		}
+
+		if found {
+			seqNumber = elementWithSameMsTime.id.seqNumber + 1
+		} else {
+			seqNumber = 0
+		}
+	}
+
+	newElements := append(stream.Elements, streamElement{id: streamIdParts{msTime, seqNumber}, fields: fields})
 
 	m[key] = newStoreValue(Stream{
 		Elements:           newElements,
 		LtsInsertedIdParts: streamIdParts{msTime, seqNumber},
 	}, sv.expiryTime)
 
-	return id, nil
+	return fmt.Sprintf("%d-%d", msTime, seqNumber), nil
 }
 
 func cloneStreamFields(fields [][]string) [][]string {
@@ -237,16 +263,36 @@ func cloneStreamFields(fields [][]string) [][]string {
 	return out
 }
 
-func validateStreamIdParts(msTime uint64, seqNumber uint64, ltsInsertedIdParts streamIdParts) bool {
+func validateStreamIdParts(msTime uint64, seqNumber uint64, ltsInsertedIdParts streamIdParts, isAutogenSeqNumber bool, isAutogen bool) bool {
+	if isAutogen {
+		return true
+	}
+
 	if msTime < ltsInsertedIdParts.msTime {
 		return false
 	}
 
-	if msTime == ltsInsertedIdParts.msTime {
+	if !isAutogenSeqNumber && msTime == ltsInsertedIdParts.msTime {
 		if seqNumber <= ltsInsertedIdParts.seqNumber {
 			return false
 		}
 	}
 
 	return true
+}
+
+func getNewStreamId(msTime uint64, seqNumber uint64, isAutogenSeqNumber bool, isAutogen bool) (uint64, uint64) {
+	if isAutogen {
+		return 0, 0
+	}
+
+	if isAutogenSeqNumber {
+		if msTime == 0 {
+			return msTime, 1
+		}
+
+		return msTime, 0
+	}
+
+	return msTime, seqNumber
 }
