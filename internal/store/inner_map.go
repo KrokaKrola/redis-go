@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"time"
 )
@@ -42,10 +43,6 @@ func (m innerMap) get(key string) (value []byte, ok bool, expired bool) {
 	}
 
 	return rb.Bytes, ok, false
-}
-
-func getPossibleEndTime() time.Time {
-	return time.Date(9999, 12, 31, 23, 59, 59, 999, time.UTC)
 }
 
 func getExpiryTime(expType ExpiryType, expTime int) (keyExpTime time.Time, ok bool) {
@@ -216,10 +213,14 @@ func (m innerMap) xadd(key string, msTime uint64, seqNumber uint64, isAutogenSeq
 		if msTime != stream.LtsInsertedIdParts.msTime {
 			seqNumber = 0
 		} else {
+			if stream.LtsInsertedIdParts.seqNumber == math.MaxUint64 {
+				return "", fmt.Errorf("ERR sequence overflow for XADD command")
+			}
+
 			seqNumber = stream.LtsInsertedIdParts.seqNumber + 1
 		}
 	} else if isAutogen {
-		msTime = uint64(time.Now().Unix())
+		msTime = uint64(time.Now().UnixMilli())
 
 		var elementWithSameMsTime streamElement
 		found := false

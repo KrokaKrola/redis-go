@@ -13,3 +13,7 @@ func newId() string {
 	rand.Read(b)
 	return fmt.Sprintf("%x-%s", t, hex.EncodeToString(b))
 }
+
+func getPossibleEndTime() time.Time {
+	return time.Date(9999, 12, 31, 23, 59, 59, 999, time.UTC)
+}
