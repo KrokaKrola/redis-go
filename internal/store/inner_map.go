@@ -220,20 +220,14 @@ func (m innerMap) xadd(key string, msTime uint64, seqNumber uint64, isAutogenSeq
 			seqNumber = stream.LtsInsertedIdParts.seqNumber + 1
 		}
 	} else if isAutogen {
-		msTime = uint64(time.Now().UnixMilli())
+		msTime = max(uint64(time.Now().UnixMilli()), stream.LtsInsertedIdParts.msTime)
 
-		var elementWithSameMsTime streamElement
-		found := false
-		for _, v := range stream.Elements {
-			if v.id.msTime == msTime {
-				elementWithSameMsTime = v
-				found = true
-				break
+		if stream.LtsInsertedIdParts.msTime == msTime {
+			if stream.LtsInsertedIdParts.seqNumber == math.MaxUint64 {
+				return "", fmt.Errorf("ERR sequence overflow for XADD command")
 			}
-		}
 
-		if found {
-			seqNumber = elementWithSameMsTime.id.seqNumber + 1
+			seqNumber = stream.LtsInsertedIdParts.seqNumber + 1
 		} else {
 			seqNumber = 0
 		}
@@ -284,7 +278,7 @@ func validateStreamIdParts(msTime uint64, seqNumber uint64, ltsInsertedIdParts s
 
 func getNewStreamId(msTime uint64, seqNumber uint64, isAutogenSeqNumber bool, isAutogen bool) (uint64, uint64) {
 	if isAutogen {
-		return 0, 0
+		return uint64(time.Now().UnixMilli()), 0
 	}
 
 	if isAutogenSeqNumber {
