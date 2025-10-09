@@ -19,7 +19,7 @@ func (m innerMap) xadd(key string, streamId StreamIdSpec, fields [][]string) (ne
 		msTime, seqNumber = getNewStreamId(streamId)
 
 		m[key] = newStoreValue(Stream{
-			Elements:           []streamElement{{id: storedStreamId{msTime, seqNumber}, fields: fields}},
+			Elements:           []StreamElement{{Id: storedStreamId{msTime, seqNumber}, Fields: fields}},
 			LtsInsertedIdParts: storedStreamId{msTime, seqNumber},
 		}, getPossibleEndTime())
 
@@ -38,30 +38,30 @@ func (m innerMap) xadd(key string, streamId StreamIdSpec, fields [][]string) (ne
 	if streamId.AutoSeq {
 		msTime = streamId.MsTime
 
-		if msTime != stream.LtsInsertedIdParts.msTime {
+		if msTime != stream.LtsInsertedIdParts.MsTime {
 			seqNumber = 0
 		} else {
-			if stream.LtsInsertedIdParts.seq == math.MaxUint64 {
+			if stream.LtsInsertedIdParts.Seq == math.MaxUint64 {
 				return "", fmt.Errorf("ERR sequence overflow for XADD command")
 			}
 
-			seqNumber = stream.LtsInsertedIdParts.seq + 1
+			seqNumber = stream.LtsInsertedIdParts.Seq + 1
 		}
 	} else if streamId.AutoFull {
-		msTime = max(uint64(time.Now().UnixMilli()), stream.LtsInsertedIdParts.msTime)
+		msTime = max(uint64(time.Now().UnixMilli()), stream.LtsInsertedIdParts.MsTime)
 
-		if stream.LtsInsertedIdParts.msTime == msTime {
-			if stream.LtsInsertedIdParts.seq == math.MaxUint64 {
+		if stream.LtsInsertedIdParts.MsTime == msTime {
+			if stream.LtsInsertedIdParts.Seq == math.MaxUint64 {
 				return "", fmt.Errorf("ERR sequence overflow for XADD command")
 			}
 
-			seqNumber = stream.LtsInsertedIdParts.seq + 1
+			seqNumber = stream.LtsInsertedIdParts.Seq + 1
 		} else {
 			seqNumber = 0
 		}
 	}
 
-	newElements := append(stream.Elements, streamElement{id: storedStreamId{msTime, seqNumber}, fields: fields})
+	newElements := append(stream.Elements, StreamElement{Id: storedStreamId{msTime, seqNumber}, Fields: fields})
 
 	m[key] = newStoreValue(Stream{
 		Elements:           newElements,
@@ -91,12 +91,12 @@ func validateStreamIdParts(streamId StreamIdSpec, ltsInsertedIdParts storedStrea
 		return true
 	}
 
-	if streamId.MsTime < ltsInsertedIdParts.msTime {
+	if streamId.MsTime < ltsInsertedIdParts.MsTime {
 		return false
 	}
 
-	if !streamId.AutoSeq && streamId.MsTime == ltsInsertedIdParts.msTime {
-		if streamId.Seq <= ltsInsertedIdParts.seq {
+	if !streamId.AutoSeq && streamId.MsTime == ltsInsertedIdParts.MsTime {
+		if streamId.Seq <= ltsInsertedIdParts.Seq {
 			return false
 		}
 	}

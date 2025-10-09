@@ -150,5 +150,44 @@ func TestEncoder_Write_Array_MissType(t *testing.T) {
 	}); err == nil {
 		t.Fatalf("expected error for decoding invalid array type, got nil")
 	}
+}
 
+func TestEncoder_Write_Inner_Arrays(t *testing.T) {
+	var buf bytes.Buffer
+	enc := NewEncoder(&buf)
+
+	if err := enc.Write(&Array{
+		Elements: []Value{
+			&Array{
+				Elements: []Value{
+					&BulkString{Bytes: []byte("1-0")},
+					&Array{
+						Elements: []Value{
+							&BulkString{Bytes: []byte("temperature")},
+							&BulkString{Bytes: []byte("36")},
+						},
+					},
+				},
+			},
+			&Array{
+				Elements: []Value{
+					&BulkString{Bytes: []byte("2-0")},
+					&Array{
+						Elements: []Value{
+							&BulkString{Bytes: []byte("temperature")},
+							&BulkString{Bytes: []byte("35")},
+						},
+					},
+				},
+			},
+		},
+	}); err != nil {
+		t.Fatalf("encoder.Write() returned error: %v", err)
+	}
+
+	got := buf.String()
+	want := "*2\r\n*2\r\n$3\r\n1-0\r\n*2\r\n$11\r\ntemperature\r\n$2\r\n36\r\n*2\r\n$3\r\n2-0\r\n*2\r\n$11\r\ntemperature\r\n$2\r\n35\r\n"
+	if got != want {
+		t.Fatalf("unexpected output: got %q, want %q", got, want)
+	}
 }

@@ -26,18 +26,18 @@ func (l List) GetType() string {
 }
 
 type Stream struct {
-	Elements           []streamElement
+	Elements           []StreamElement
 	LtsInsertedIdParts storedStreamId
 }
 
-type streamElement struct {
-	id     storedStreamId
-	fields [][]string
+type StreamElement struct {
+	Id     storedStreamId
+	Fields [][]string
 }
 
 type storedStreamId struct {
-	msTime uint64
-	seq    uint64
+	MsTime uint64
+	Seq    uint64
 }
 
 type StreamIdSpec struct {

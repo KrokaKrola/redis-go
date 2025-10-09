@@ -257,3 +257,10 @@ func (s *Store) Xadd(key string, streamId StreamIdSpec, fields [][]string) (newE
 
 	return s.xadd(key, streamId, fields)
 }
+
+func (s *Store) Xrange(key string, start string, end string) (Stream, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.xrange(key, start, end)
+}
