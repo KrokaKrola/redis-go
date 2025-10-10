@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -23,25 +22,4 @@ func newStoreValue(value StoreValueType, expiryTime time.Time) storeValue {
 		value,
 		expiryTime,
 	}
-}
-
-func (m innerMap) xrange(key, start, end string) (Stream, error) {
-	v, ok := m[key]
-
-	if !ok {
-		return Stream{}, nil
-	}
-
-	if v.isExpired() {
-		return Stream{}, nil
-	}
-
-	stream, ok := v.value.(Stream)
-	if !ok {
-		return Stream{}, fmt.Errorf("MISSTYPE of the element in the underlying array")
-	}
-
-	// todo: add filtering by start and end
-
-	return stream, nil
 }

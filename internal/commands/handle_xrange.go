@@ -40,7 +40,6 @@ func handleXrange(cmd *Command, store *store.Store) resp.Value {
 		return arr
 	}
 
-	// todo: refactor
 	for _, el := range stream.Elements {
 		fields := &resp.Array{}
 
