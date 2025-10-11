@@ -45,6 +45,8 @@ type StreamIdSpec struct {
 	Seq      uint64
 	AutoSeq  bool
 	AutoFull bool
+	IsMax    bool
+	IsMin    bool
 }
 
 func (s Stream) GetType() string {

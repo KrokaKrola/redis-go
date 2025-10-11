@@ -333,4 +333,169 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			t.Fatalf("unexpected error message: %q", errResp.Msg)
 		}
 	})
+
+	t.Run("returns range of stream with - as start bound", func(t *testing.T) {
+		s := newPopulatedStore(t, streamKey)
+
+		cmd := &Command{
+			Name: XRANGE_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{Bytes: []byte(streamKey)},
+				&resp.BulkString{Bytes: []byte("-")},
+				&resp.BulkString{Bytes: []byte("1-3")},
+			},
+		}
+
+		out := Dispatch(cmd, s)
+		arr, ok := out.(*resp.Array)
+		if !ok {
+			t.Fatalf("expected Array, got %T", out)
+		}
+		if len(arr.Elements) != 4 {
+			t.Fatalf("expected 4 elements, got %d", len(arr.Elements))
+		}
+		want := []string{"1-0", "1-1", "1-2", "1-3"}
+		for i, expected := range want {
+			entry, ok := arr.Elements[i].(*resp.Array)
+			if !ok {
+				t.Fatalf("unexpected XRANGE entry at %d: %#v", i, arr.Elements[i])
+			}
+			id, ok := entry.Elements[0].(*resp.BulkString)
+			if !ok || string(id.Bytes) != expected {
+				t.Fatalf("entry %d: expected id %s, got %#v", i, expected, entry.Elements[0])
+			}
+		}
+	})
+
+	t.Run("returns range of stream with + as end bound", func(t *testing.T) {
+		s := newPopulatedStore(t, streamKey)
+
+		cmd := &Command{
+			Name: XRANGE_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{Bytes: []byte(streamKey)},
+				&resp.BulkString{Bytes: []byte("1-1")},
+				&resp.BulkString{Bytes: []byte("+")},
+			},
+		}
+
+		out := Dispatch(cmd, s)
+		arr, ok := out.(*resp.Array)
+		if !ok {
+			t.Fatalf("expected Array, got %T", out)
+		}
+		if len(arr.Elements) != 4 {
+			t.Fatalf("expected 4 elements, got %d", len(arr.Elements))
+		}
+		want := []string{"1-1", "1-2", "1-3", "2-0"}
+		for i, expected := range want {
+			entry, ok := arr.Elements[i].(*resp.Array)
+			if !ok {
+				t.Fatalf("unexpected XRANGE entry at %d: %#v", i, arr.Elements[i])
+			}
+			id, ok := entry.Elements[0].(*resp.BulkString)
+			if !ok || string(id.Bytes) != expected {
+				t.Fatalf("entry %d: expected id %s, got %#v", i, expected, entry.Elements[0])
+			}
+		}
+	})
+
+	t.Run("returns full range of stream with - as start bound and + as end bound", func(t *testing.T) {
+		s := newPopulatedStore(t, streamKey)
+
+		cmd := &Command{
+			Name: XRANGE_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{Bytes: []byte(streamKey)},
+				&resp.BulkString{Bytes: []byte("-")},
+				&resp.BulkString{Bytes: []byte("+")},
+			},
+		}
+
+		out := Dispatch(cmd, s)
+		arr, ok := out.(*resp.Array)
+		if !ok {
+			t.Fatalf("expected Array, got %T", out)
+		}
+		if len(arr.Elements) != 5 {
+			t.Fatalf("expected 5 elements, got %d", len(arr.Elements))
+		}
+		want := []string{"1-0", "1-1", "1-2", "1-3", "2-0"}
+		for i, expected := range want {
+			entry, ok := arr.Elements[i].(*resp.Array)
+			if !ok {
+				t.Fatalf("unexpected XRANGE entry at %d: %#v", i, arr.Elements[i])
+			}
+			id, ok := entry.Elements[0].(*resp.BulkString)
+			if !ok || string(id.Bytes) != expected {
+				t.Fatalf("entry %d: expected id %s, got %#v", i, expected, entry.Elements[0])
+			}
+		}
+	})
+
+	t.Run("returns empty stream for + +", func(t *testing.T) {
+		s := newPopulatedStore(t, streamKey)
+
+		cmd := &Command{
+			Name: XRANGE_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{Bytes: []byte(streamKey)},
+				&resp.BulkString{Bytes: []byte("+")},
+				&resp.BulkString{Bytes: []byte("+")},
+			},
+		}
+
+		out := Dispatch(cmd, s)
+		arr, ok := out.(*resp.Array)
+		if !ok {
+			t.Fatalf("expected Array, got %T", out)
+		}
+		if len(arr.Elements) != 0 {
+			t.Fatalf("expected 0 elements, got %d", len(arr.Elements))
+		}
+	})
+
+	t.Run("returns empty stream for + -", func(t *testing.T) {
+		s := newPopulatedStore(t, streamKey)
+
+		cmd := &Command{
+			Name: XRANGE_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{Bytes: []byte(streamKey)},
+				&resp.BulkString{Bytes: []byte("+")},
+				&resp.BulkString{Bytes: []byte("-")},
+			},
+		}
+
+		out := Dispatch(cmd, s)
+		arr, ok := out.(*resp.Array)
+		if !ok {
+			t.Fatalf("expected Array, got %T", out)
+		}
+		if len(arr.Elements) != 0 {
+			t.Fatalf("expected 0 elements, got %d", len(arr.Elements))
+		}
+	})
+
+	t.Run("returns empty stream for - -", func(t *testing.T) {
+		s := newPopulatedStore(t, streamKey)
+
+		cmd := &Command{
+			Name: XRANGE_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{Bytes: []byte(streamKey)},
+				&resp.BulkString{Bytes: []byte("-")},
+				&resp.BulkString{Bytes: []byte("-")},
+			},
+		}
+
+		out := Dispatch(cmd, s)
+		arr, ok := out.(*resp.Array)
+		if !ok {
+			t.Fatalf("expected Array, got %T", out)
+		}
+		if len(arr.Elements) != 0 {
+			t.Fatalf("expected 0 elements, got %d", len(arr.Elements))
+		}
+	})
 }

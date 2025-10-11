@@ -32,12 +32,25 @@ func (m innerMap) xrange(key, start, end string) (Stream, error) {
 		startBound.Seq = 0
 	}
 
+	if startId.IsMin {
+		startBound.MsTime = 0
+		startBound.Seq = 0
+	} else if startId.IsMax {
+		startBound.MsTime = math.MaxUint64
+		startBound.Seq = math.MaxUint64
+	}
+
 	endId, ok := parseXrangeStreamId(end)
 	if !ok {
 		return Stream{}, fmt.Errorf("ERR invalid end value for XRANGE command")
 	}
 	endBound := storedStreamId{MsTime: endId.MsTime, Seq: endId.Seq}
 	if endId.AutoSeq {
+		endBound.Seq = math.MaxUint64
+	}
+
+	if endId.IsMax {
+		endBound.MsTime = math.MaxUint64
 		endBound.Seq = math.MaxUint64
 	}
 
@@ -59,6 +72,14 @@ func (m innerMap) xrange(key, start, end string) (Stream, error) {
 }
 
 func parseXrangeStreamId(id string) (streamId StreamIdSpec, ok bool) {
+	if id == "-" {
+		return StreamIdSpec{IsMin: true}, true
+	}
+
+	if id == "+" {
+		return StreamIdSpec{IsMax: true}, true
+	}
+
 	before, after, found := strings.Cut(id, "-")
 
 	msTime, err := strconv.ParseUint(before, 10, 64)
