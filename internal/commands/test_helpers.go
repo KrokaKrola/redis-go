@@ -119,3 +119,43 @@ func assertListEquals(t *testing.T, s *store.Store, key string, want []string) {
 		t.Fatalf("unexpected list order, got %#v, want %#v", got, want)
 	}
 }
+
+func newStreamPopulatedStore(t *testing.T, key string) *store.Store {
+	t.Helper()
+
+	s := store.NewStore()
+	entries := []struct {
+		id    string
+		field string
+		value string
+	}{
+		{"1-0", "a", "0"},
+		{"1-1", "b", "1"},
+		{"1-2", "c", "2"},
+		{"1-3", "d", "3"},
+		{"2-0", "e", "4"},
+	}
+
+	for _, entry := range entries {
+		cmd := &Command{
+			Name: XADD_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{Bytes: []byte(key)},
+				&resp.BulkString{Bytes: []byte(entry.id)},
+				&resp.BulkString{Bytes: []byte(entry.field)},
+				&resp.BulkString{Bytes: []byte(entry.value)},
+			},
+		}
+
+		out := Dispatch(cmd, s)
+		bs, ok := out.(*resp.BulkString)
+		if !ok {
+			t.Fatalf("expected BulkString from XADD, got %T", out)
+		}
+		if string(bs.Bytes) != entry.id {
+			t.Fatalf("expected XADD to echo id %q, got %q", entry.id, string(bs.Bytes))
+		}
+	}
+
+	return s
+}

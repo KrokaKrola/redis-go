@@ -7,51 +7,11 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
 
-func newPopulatedStore(t *testing.T, key string) *store.Store {
-	t.Helper()
-
-	s := store.NewStore()
-	entries := []struct {
-		id    string
-		field string
-		value string
-	}{
-		{"1-0", "a", "0"},
-		{"1-1", "b", "1"},
-		{"1-2", "c", "2"},
-		{"1-3", "d", "3"},
-		{"2-0", "e", "4"},
-	}
-
-	for _, entry := range entries {
-		cmd := &Command{
-			Name: XADD_COMMAND,
-			Args: []resp.Value{
-				&resp.BulkString{Bytes: []byte(key)},
-				&resp.BulkString{Bytes: []byte(entry.id)},
-				&resp.BulkString{Bytes: []byte(entry.field)},
-				&resp.BulkString{Bytes: []byte(entry.value)},
-			},
-		}
-
-		out := Dispatch(cmd, s)
-		bs, ok := out.(*resp.BulkString)
-		if !ok {
-			t.Fatalf("expected BulkString from XADD, got %T", out)
-		}
-		if string(bs.Bytes) != entry.id {
-			t.Fatalf("expected XADD to echo id %q, got %q", entry.id, string(bs.Bytes))
-		}
-	}
-
-	return s
-}
-
 func TestDispatchXrangeCommand(t *testing.T) {
 	const streamKey = "my_stream"
 
 	t.Run("filters elements within equal millisecond boundaries", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -104,7 +64,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("returns only matching element when start equals end", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -134,7 +94,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("expands auto sequence bounds when timestamps equal", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -167,7 +127,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("uses auto sequence lower bound when no start sequence provided", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -208,7 +168,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("returns intermediate milliseconds inclusively", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -335,7 +295,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("returns range of stream with - as start bound", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -368,7 +328,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("returns range of stream with + as end bound", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -401,7 +361,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("returns full range of stream with - as start bound and + as end bound", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -434,7 +394,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("returns empty stream for + +", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -456,7 +416,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("returns empty stream for + -", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,
@@ -478,7 +438,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 	})
 
 	t.Run("returns empty stream for - -", func(t *testing.T) {
-		s := newPopulatedStore(t, streamKey)
+		s := newStreamPopulatedStore(t, streamKey)
 
 		cmd := &Command{
 			Name: XRANGE_COMMAND,

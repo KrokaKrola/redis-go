@@ -100,6 +100,7 @@ var handlers = map[Name]handlerFn{
 	TYPE_COMMAND:   handleType,
 	XADD_COMMAND:   handleXadd,
 	XRANGE_COMMAND: handleXrange,
+	XREAD_COMMAND:  handleXread,
 }
 
 func Dispatch(cmd *Command, s *store.Store) resp.Value {

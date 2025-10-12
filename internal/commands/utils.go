@@ -1,9 +1,11 @@
 package commands
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
+	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
 
 func valueAsBytes(v resp.Value) (value []byte, ok bool) {
@@ -88,4 +90,28 @@ func valueAsFloat(v resp.Value) (value float64, ok bool) {
 	default:
 		return 0, false
 	}
+}
+
+func populateRespArrayFromStream(stream store.Stream) *resp.Array {
+	arr := &resp.Array{}
+
+	for _, el := range stream.Elements {
+		fields := &resp.Array{}
+
+		for _, field := range el.Fields {
+			for i := range 2 {
+				fields.Elements = append(fields.Elements, &resp.BulkString{Bytes: []byte(field[i])})
+			}
+		}
+
+		arr.Elements = append(arr.Elements, resp.Value(&resp.Array{
+			Elements: []resp.Value{
+				&resp.BulkString{Bytes: fmt.Appendf(nil, "%d-%d", el.Id.MsTime, el.Id.Seq)},
+				fields,
+			},
+		},
+		))
+	}
+
+	return arr
 }

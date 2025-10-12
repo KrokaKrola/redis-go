@@ -18,6 +18,7 @@ const (
 	TYPE_COMMAND   Name = "TYPE"
 	XADD_COMMAND   Name = "XADD"
 	XRANGE_COMMAND Name = "XRANGE"
+	XREAD_COMMAND  Name = "XREAD"
 )
 
 var commandByName = map[string]Name{
@@ -34,6 +35,7 @@ var commandByName = map[string]Name{
 	string(TYPE_COMMAND):   TYPE_COMMAND,
 	string(XADD_COMMAND):   XADD_COMMAND,
 	string(XRANGE_COMMAND): XRANGE_COMMAND,
+	string(XREAD_COMMAND):  XREAD_COMMAND,
 }
 
 func getCommandName(name []byte) Name {

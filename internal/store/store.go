@@ -264,3 +264,10 @@ func (s *Store) Xrange(key string, start string, end string) (Stream, error) {
 
 	return s.xrange(key, start, end)
 }
+
+func (s *Store) Xread(keys []string, id string) ([]Stream, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.xread(keys, id)
+}
