@@ -136,6 +136,16 @@ func newStreamPopulatedStore(t *testing.T, key string) *store.Store {
 		{"2-0", "e", "4"},
 	}
 
+	addEntriesToStore(t, s, key, entries)
+
+	return s
+}
+
+func addEntriesToStore(t *testing.T, s *store.Store, key string, entries []struct {
+	id    string
+	field string
+	value string
+}) {
 	for _, entry := range entries {
 		cmd := &Command{
 			Name: XADD_COMMAND,
@@ -156,6 +166,4 @@ func newStreamPopulatedStore(t *testing.T, key string) *store.Store {
 			t.Fatalf("expected XADD to echo id %q, got %q", entry.id, string(bs.Bytes))
 		}
 	}
-
-	return s
 }

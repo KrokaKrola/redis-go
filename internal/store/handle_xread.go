@@ -6,23 +6,28 @@ import (
 	"strings"
 )
 
-func (m innerMap) xread(keys []string, id string) ([]Stream, error) {
+func (m innerMap) xread(keys [][]string) ([]Stream, error) {
 	streams := []Stream{}
 
-	streamIdSpec, ok := parseXreadStreamId(id)
-	if !ok {
-		return streams, fmt.Errorf("ERR invalid stream id")
-	}
-
 	for _, key := range keys {
-		storeStreamRawValue, ok := m[key]
+		id := key[1]
+		streamIdSpec, ok := parseXreadStreamId(id)
 
 		if !ok {
+			return streams, fmt.Errorf("ERR invalid stream id")
+		}
+
+		keyValue := key[0]
+		storeStreamRawValue, ok := m[keyValue]
+
+		if !ok {
+			streams = append(streams, Stream{})
 			continue
 		}
 
 		if storeStreamRawValue.isExpired() {
-			m.delete(key)
+			m.delete(keyValue)
+			streams = append(streams, Stream{})
 			continue
 		}
 

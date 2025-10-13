@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"strings"
+
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
@@ -12,29 +14,34 @@ func handleXread(cmd *Command, store *store.Store) resp.Value {
 		return &resp.Error{Msg: "ERR invalid number of arguments for XREAD command"}
 	}
 
-	_, ok := cmd.ArgString(0)
-	if !ok {
-		return &resp.Error{Msg: "ERR STREAMS identifier for XREAD command"}
+	cmdIdentifier, ok := cmd.ArgString(0)
+	if !ok || !strings.EqualFold(cmdIdentifier, "streams") {
+		return &resp.Error{Msg: "ERR invalid STREAMS identifier for XREAD command"}
 	}
 
-	keys := []string{}
-	offset := 1
+	if (argsLen-1)%2 != 0 {
+		return &resp.Error{Msg: "ERR invalid number of arguments for XREAD command"}
+	}
 
-	for i := range argsLen - 1 - offset {
-		key, ok := cmd.ArgString(i + offset)
+	pairsCount := (argsLen) / 2
+
+	streamKeyIdPairs := [][]string{}
+
+	for i := range pairsCount {
+		storeKey, ok := cmd.ArgString(i + 1)
 		if !ok {
-			return &resp.Error{Msg: "ERR key value for XREAD command"}
+			return &resp.Error{Msg: "ERR invalid stream name value for XREAD command"}
 		}
 
-		keys = append(keys, key)
+		streamId, ok := cmd.ArgString(i + pairsCount + 1)
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid stream id value for XREAD command"}
+		}
+
+		streamKeyIdPairs = append(streamKeyIdPairs, []string{storeKey, streamId})
 	}
 
-	id, ok := cmd.ArgString(argsLen - 1)
-	if !ok {
-		return &resp.Error{Msg: "ERR invalid stream id value for XREAD command"}
-	}
-
-	streams, err := store.Xread(keys, id)
+	streams, err := store.Xread(streamKeyIdPairs)
 	if err != nil {
 		return &resp.Error{Msg: err.Error()}
 	}
@@ -53,7 +60,7 @@ func handleXread(cmd *Command, store *store.Store) resp.Value {
 
 		arr.Elements = append(arr.Elements, resp.Value(&resp.Array{
 			Elements: []resp.Value{
-				&resp.BulkString{Bytes: []byte(keys[i])},
+				&resp.BulkString{Bytes: []byte(streamKeyIdPairs[i][0])},
 				streamElements,
 			},
 		}))
