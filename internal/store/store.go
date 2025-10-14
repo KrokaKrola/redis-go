@@ -9,6 +9,7 @@ type Store struct {
 	sync.RWMutex
 	innerMap
 	blpopQueue map[string][]blpopListener
+	xreadCh    chan StreamElement
 }
 
 type blpopListener struct {
@@ -20,6 +21,7 @@ func NewStore() *Store {
 	return &Store{
 		innerMap:   make(innerMap),
 		blpopQueue: make(map[string][]blpopListener),
+		xreadCh:    make(chan StreamElement),
 	}
 }
 
@@ -255,6 +257,8 @@ func (s *Store) Xadd(key string, streamId StreamIdSpec, fields [][]string) (newE
 	s.Lock()
 	defer s.Unlock()
 
+	// todo: emit element into xreadListener
+
 	return s.xadd(key, streamId, fields)
 }
 
@@ -265,9 +269,36 @@ func (s *Store) Xrange(key string, start string, end string) (Stream, error) {
 	return s.xrange(key, start, end)
 }
 
-func (s *Store) Xread(keys [][]string) ([]Stream, error) {
+func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream, error) {
 	s.Lock()
-	defer s.Unlock()
 
-	return s.xread(keys)
+	streams, err := s.xread(keys)
+
+	if err != nil {
+		s.Unlock()
+		return nil, err
+	}
+
+	if !isBlocking {
+		return streams, nil
+	}
+
+	// todo: check if stream are not empty -> return response
+
+	s.Unlock()
+
+	timeoutCh := (<-chan time.Time)(nil)
+	if timeoutMs > 0 {
+		timeoutCh = time.After(time.Duration(float64(timeoutMs) * float64(time.Millisecond)))
+	}
+
+	select {
+	case <-s.xreadCh:
+		// todo: check if passed value is correct, and if so return it to the client
+	case <-timeoutCh:
+		// didn't receive any elements during timeout
+		return []Stream{}, nil
+	}
+
+	return streams, nil
 }

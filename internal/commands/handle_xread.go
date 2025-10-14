@@ -10,13 +10,36 @@ import (
 func handleXread(cmd *Command, store *store.Store) resp.Value {
 	argsLen := cmd.ArgsLen()
 
-	if argsLen < 3 {
+	if argsLen < 1 {
 		return &resp.Error{Msg: "ERR invalid number of arguments for XREAD command"}
 	}
 
 	cmdIdentifier, ok := cmd.ArgString(0)
-	if !ok || !strings.EqualFold(cmdIdentifier, "streams") {
-		return &resp.Error{Msg: "ERR invalid STREAMS identifier for XREAD command"}
+	if !ok {
+		return &resp.Error{Msg: "ERR invalid identifier for XREAD command"}
+	}
+
+	isBlocking := strings.EqualFold(cmdIdentifier, "block")
+
+	if isBlocking && argsLen < 5 {
+		return &resp.Error{Msg: "ERR invalid number of arguments for XREAD BLOCK command"}
+	} else if !isBlocking && argsLen < 3 {
+		return &resp.Error{Msg: "ERR invalid number of arguments for XREAD STREAMS command"}
+	}
+
+	blockingTimeoutMs := 0
+
+	if isBlocking {
+		blockingTimeoutMs, ok = cmd.ArgInt(1)
+
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid BLOCK timeout value for XREAD command"}
+		}
+
+		streamsKeyword, ok := cmd.ArgString(2)
+		if !ok || !strings.EqualFold(streamsKeyword, "streams") {
+			return &resp.Error{Msg: "ERR invalid STREAMS identifier for XREAD command"}
+		}
 	}
 
 	if (argsLen-1)%2 != 0 {
@@ -25,15 +48,25 @@ func handleXread(cmd *Command, store *store.Store) resp.Value {
 
 	pairsCount := (argsLen) / 2
 
+	if isBlocking {
+		pairsCount = pairsCount - 1
+	}
+
 	streamKeyIdPairs := [][]string{}
 
+	streamsKeyIdsOffset := 1
+
+	if isBlocking {
+		streamsKeyIdsOffset = 3
+	}
+
 	for i := range pairsCount {
-		storeKey, ok := cmd.ArgString(i + 1)
+		storeKey, ok := cmd.ArgString(i + streamsKeyIdsOffset)
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid stream name value for XREAD command"}
 		}
 
-		streamId, ok := cmd.ArgString(i + pairsCount + 1)
+		streamId, ok := cmd.ArgString(i + pairsCount + streamsKeyIdsOffset)
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid stream id value for XREAD command"}
 		}
@@ -41,7 +74,7 @@ func handleXread(cmd *Command, store *store.Store) resp.Value {
 		streamKeyIdPairs = append(streamKeyIdPairs, []string{storeKey, streamId})
 	}
 
-	streams, err := store.Xread(streamKeyIdPairs)
+	streams, err := store.Xread(streamKeyIdPairs, blockingTimeoutMs, isBlocking)
 	if err != nil {
 		return &resp.Error{Msg: err.Error()}
 	}

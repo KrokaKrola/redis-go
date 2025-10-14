@@ -162,7 +162,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 		}
 	})
 
-	t.Run("returns null array when stream missing", func(t *testing.T) {
+	t.Run("returns null array when stream is missing", func(t *testing.T) {
 		s := store.NewStore()
 
 		cmd := &Command{
@@ -348,5 +348,26 @@ func TestDispatchXreadCommand(t *testing.T) {
 			{id: "1-3", fields: []string{"d", "3"}},
 			{id: "2-0", fields: []string{"e", "4"}},
 		})
+	})
+
+	t.Run("blocking read is correctly parsed", func(t *testing.T) {
+		s := store.NewStore()
+
+		cmd := &Command{
+			Name: XREAD_COMMAND,
+			Args: []resp.Value{
+				&resp.BulkString{Bytes: []byte("BLOCK")},
+				&resp.BulkString{Bytes: []byte("100")},
+				&resp.BulkString{Bytes: []byte("STREAMS")},
+				&resp.BulkString{Bytes: []byte("key")},
+				&resp.BulkString{Bytes: []byte("0-0")},
+			},
+		}
+
+		out := Dispatch(cmd, s)
+
+		if arr, ok := out.(*resp.Error); ok {
+			t.Fatalf("unexpected error from XREAD response %#v, expected resp.Array", arr)
+		}
 	})
 }
