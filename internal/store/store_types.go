@@ -1,5 +1,7 @@
 package store
 
+import "fmt"
+
 type StoreValueType interface {
 	GetType() string
 }
@@ -38,6 +40,10 @@ type StreamElement struct {
 type storedStreamId struct {
 	MsTime uint64
 	Seq    uint64
+}
+
+func (s storedStreamId) ToString() string {
+	return fmt.Sprintf("%d-%d", s.MsTime, s.Seq)
 }
 
 type StreamIdSpec struct {

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (m innerMap) xadd(key string, streamId StreamIdSpec, fields [][]string) (newEntryId string, err error) {
+func (m innerMap) xadd(key string, streamId StreamIdSpec, fields [][]string) (streamElement StreamElement, err error) {
 	sv, ok := m[key]
 
 	fields = cloneStreamFields(fields)
@@ -18,21 +18,26 @@ func (m innerMap) xadd(key string, streamId StreamIdSpec, fields [][]string) (ne
 	if !ok || sv.isExpired() {
 		msTime, seqNumber = getNewStreamId(streamId)
 
+		sEl := StreamElement{
+			Id:     storedStreamId{msTime, seqNumber},
+			Fields: fields,
+		}
+
 		m[key] = newStoreValue(Stream{
-			Elements:           []StreamElement{{Id: storedStreamId{msTime, seqNumber}, Fields: fields}},
+			Elements:           []StreamElement{sEl},
 			LtsInsertedIdParts: storedStreamId{msTime, seqNumber},
 		}, getPossibleEndTime())
 
-		return fmt.Sprintf("%d-%d", msTime, seqNumber), nil
+		return sEl, nil
 	}
 
 	stream, okStream := sv.value.(Stream)
 	if !okStream {
-		return "", errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
+		return StreamElement{}, errors.New("WRONGTYPE Operation against a key holding the wrong kind of value")
 	}
 
 	if isValidStreamId := validateStreamIdParts(streamId, stream.LtsInsertedIdParts); !isValidStreamId {
-		return "", fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+		return StreamElement{}, fmt.Errorf("ERR The ID specified in XADD is equal or smaller than the target stream top item")
 	}
 
 	if streamId.AutoSeq {
@@ -42,7 +47,7 @@ func (m innerMap) xadd(key string, streamId StreamIdSpec, fields [][]string) (ne
 			seqNumber = 0
 		} else {
 			if stream.LtsInsertedIdParts.Seq == math.MaxUint64 {
-				return "", fmt.Errorf("ERR sequence overflow for XADD command")
+				return StreamElement{}, fmt.Errorf("ERR sequence overflow for XADD command")
 			}
 
 			seqNumber = stream.LtsInsertedIdParts.Seq + 1
@@ -52,7 +57,7 @@ func (m innerMap) xadd(key string, streamId StreamIdSpec, fields [][]string) (ne
 
 		if stream.LtsInsertedIdParts.MsTime == msTime {
 			if stream.LtsInsertedIdParts.Seq == math.MaxUint64 {
-				return "", fmt.Errorf("ERR sequence overflow for XADD command")
+				return StreamElement{}, fmt.Errorf("ERR sequence overflow for XADD command")
 			}
 
 			seqNumber = stream.LtsInsertedIdParts.Seq + 1
@@ -61,14 +66,16 @@ func (m innerMap) xadd(key string, streamId StreamIdSpec, fields [][]string) (ne
 		}
 	}
 
-	newElements := append(stream.Elements, StreamElement{Id: storedStreamId{msTime, seqNumber}, Fields: fields})
+	sEl := StreamElement{Id: storedStreamId{msTime, seqNumber}, Fields: fields}
+
+	newElements := append(stream.Elements, sEl)
 
 	m[key] = newStoreValue(Stream{
 		Elements:           newElements,
 		LtsInsertedIdParts: storedStreamId{msTime, seqNumber},
 	}, sv.expiryTime)
 
-	return fmt.Sprintf("%d-%d", msTime, seqNumber), nil
+	return sEl, nil
 }
 
 func cloneStreamFields(fields [][]string) [][]string {

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -9,7 +10,7 @@ type Store struct {
 	sync.RWMutex
 	innerMap
 	blpopQueue map[string][]blpopListener
-	xreadCh    chan StreamElement
+	xreadQueue map[string][]xreadListener
 }
 
 type blpopListener struct {
@@ -17,11 +18,20 @@ type blpopListener struct {
 	valueCh chan string
 }
 
+type xreadEvent struct {
+	key string
+	id  storedStreamId
+}
+
+type xreadListener struct {
+	notify chan<- xreadEvent
+}
+
 func NewStore() *Store {
 	return &Store{
 		innerMap:   make(innerMap),
 		blpopQueue: make(map[string][]blpopListener),
-		xreadCh:    make(chan StreamElement),
+		xreadQueue: make(map[string][]xreadListener),
 	}
 }
 
@@ -255,11 +265,30 @@ func (s *Store) GetStoreRawValue(key string) (StoreValueType, bool) {
 
 func (s *Store) Xadd(key string, streamId StreamIdSpec, fields [][]string) (newEntryId string, err error) {
 	s.Lock()
-	defer s.Unlock()
 
-	// todo: emit element into xreadListener
+	streamElement, err := s.xadd(key, streamId, fields)
 
-	return s.xadd(key, streamId, fields)
+	s.Unlock()
+
+	if err != nil {
+		return "", err
+	}
+
+	listeners := s.xreadQueue[key]
+	if len(listeners) > 0 {
+		s.Lock()
+		event := xreadEvent{key: key, id: streamElement.Id}
+		listeners[0].notify <- event
+		s.xreadQueue[key] = listeners[1:]
+
+		if len(s.xreadQueue[key]) == 0 {
+			delete(s.xreadQueue, key)
+		}
+
+		s.Unlock()
+	}
+
+	return fmt.Sprintf("%d-%d", streamElement.Id.MsTime, streamElement.Id.Seq), nil
 }
 
 func (s *Store) Xrange(key string, start string, end string) (Stream, error) {
@@ -280,10 +309,28 @@ func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream
 	}
 
 	if !isBlocking {
+		s.Unlock()
 		return streams, nil
 	}
 
-	// todo: check if stream are not empty -> return response
+	hasEntries := false
+
+	for _, stream := range streams {
+		if len(stream.Elements) > 0 {
+			hasEntries = true
+			break
+		}
+	}
+
+	if hasEntries {
+		s.Unlock()
+		return streams, nil
+	}
+
+	notifyCh := make(chan xreadEvent, len(keys))
+	for _, pair := range keys {
+		s.xreadQueue[pair[0]] = append(s.xreadQueue[pair[0]], xreadListener{notify: notifyCh})
+	}
 
 	s.Unlock()
 
@@ -293,12 +340,22 @@ func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream
 	}
 
 	select {
-	case <-s.xreadCh:
-		// todo: check if passed value is correct, and if so return it to the client
+	case ev := <-notifyCh:
+		s.Lock()
+
+		id := ""
+		for _, pair := range keys {
+			if pair[0] == ev.key {
+				id = pair[1]
+			}
+		}
+
+		streams, err := s.xread([][]string{{ev.key, id}})
+
+		s.Unlock()
+		return streams, err
 	case <-timeoutCh:
 		// didn't receive any elements during timeout
 		return []Stream{}, nil
 	}
-
-	return streams, nil
 }
