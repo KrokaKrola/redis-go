@@ -275,36 +275,39 @@ func (s *Store) Xadd(key string, streamId StreamIdSpec, fields [][]string) (newE
 		return "", err
 	}
 
-	s.produceXaddEvents(key, streamId, streamElement)
+	s.produceXaddEvents(key, streamElement)
 
 	return fmt.Sprintf("%d-%d", streamElement.Id.MsTime, streamElement.Id.Seq), nil
 }
 
-func (s *Store) produceXaddEvents(key string, streamId StreamIdSpec, newElement StreamElement) {
+func (s *Store) produceXaddEvents(key string, newElement StreamElement) {
+	s.Lock()
+	defer s.Unlock()
+
 	listeners := s.xreadQueue[key]
 
 	if len(listeners) > 0 {
-		s.Lock()
-
-		for i, listener := range listeners {
-			if streamId.MsTime < listener.id.MsTime {
+		remaining := []xreadListener{}
+		for _, listener := range listeners {
+			if newElement.Id.MsTime < listener.id.MsTime {
+				remaining = append(remaining, listener)
 				continue
 			}
 
-			if streamId.Seq <= listener.id.Seq {
+			if newElement.Id.MsTime == listener.id.MsTime && newElement.Id.Seq <= listener.id.Seq {
+				remaining = append(remaining, listener)
 				continue
 			}
 
 			event := xreadEvent{key: key, id: newElement.Id}
 			listener.notify <- event
-			s.xreadQueue[key] = append(listeners[:i], listeners[i+1:]...)
 		}
 
-		if len(s.xreadQueue[key]) == 0 {
+		if len(remaining) == 0 {
 			delete(s.xreadQueue, key)
+		} else {
+			s.xreadQueue[key] = remaining
 		}
-
-		s.Unlock()
 	}
 }
 
@@ -345,9 +348,34 @@ func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream
 	}
 
 	notifyCh := make(chan xreadEvent, len(keys))
+
+	cleanup := func() {
+		for _, pair := range keys {
+			queue := s.xreadQueue[pair[0]]
+			if len(queue) == 0 {
+				continue
+			}
+
+			filtered := queue[:0]
+			for _, listener := range queue {
+				if listener.notify != notifyCh {
+					filtered = append(filtered, listener)
+				}
+			}
+
+			if len(filtered) == 0 {
+				delete(s.xreadQueue, pair[0])
+			} else {
+				s.xreadQueue[pair[0]] = filtered
+			}
+		}
+	}
+
 	for _, pair := range keys {
 		id, ok := parseXreadStreamId(pair[1])
 		if !ok {
+			cleanup()
+			s.Unlock()
 			return []Stream{}, fmt.Errorf("ERR invalid stream id %s", pair[1])
 		}
 
@@ -374,10 +402,16 @@ func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream
 
 		streams, err := s.xread([][]string{{ev.key, id}})
 
+		cleanup()
 		s.Unlock()
+
 		return streams, err
 	case <-timeoutCh:
 		// didn't receive any elements during timeout
+		s.Lock()
+		cleanup()
+		s.Unlock()
+
 		return []Stream{}, nil
 	}
 }
