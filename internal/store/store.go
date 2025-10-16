@@ -390,17 +390,10 @@ func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream
 	}
 
 	select {
-	case ev := <-notifyCh:
+	case <-notifyCh:
 		s.Lock()
 
-		id := ""
-		for _, pair := range keys {
-			if pair[0] == ev.key {
-				id = pair[1]
-			}
-		}
-
-		streams, err := s.xread([][]string{{ev.key, id}})
+		streams, err := s.xread(keys)
 
 		cleanup()
 		s.Unlock()
