@@ -25,6 +25,7 @@ type xreadEvent struct {
 
 type xreadListener struct {
 	notify chan<- xreadEvent
+	id     StreamIdSpec
 }
 
 func NewStore() *Store {
@@ -274,12 +275,30 @@ func (s *Store) Xadd(key string, streamId StreamIdSpec, fields [][]string) (newE
 		return "", err
 	}
 
+	s.produceXaddEvents(key, streamId, streamElement)
+
+	return fmt.Sprintf("%d-%d", streamElement.Id.MsTime, streamElement.Id.Seq), nil
+}
+
+func (s *Store) produceXaddEvents(key string, streamId StreamIdSpec, newElement StreamElement) {
 	listeners := s.xreadQueue[key]
+
 	if len(listeners) > 0 {
 		s.Lock()
-		event := xreadEvent{key: key, id: streamElement.Id}
-		listeners[0].notify <- event
-		s.xreadQueue[key] = listeners[1:]
+
+		for i, listener := range listeners {
+			if streamId.MsTime < listener.id.MsTime {
+				continue
+			}
+
+			if streamId.Seq <= listener.id.Seq {
+				continue
+			}
+
+			event := xreadEvent{key: key, id: newElement.Id}
+			listener.notify <- event
+			s.xreadQueue[key] = append(listeners[:i], listeners[i+1:]...)
+		}
 
 		if len(s.xreadQueue[key]) == 0 {
 			delete(s.xreadQueue, key)
@@ -287,8 +306,6 @@ func (s *Store) Xadd(key string, streamId StreamIdSpec, fields [][]string) (newE
 
 		s.Unlock()
 	}
-
-	return fmt.Sprintf("%d-%d", streamElement.Id.MsTime, streamElement.Id.Seq), nil
 }
 
 func (s *Store) Xrange(key string, start string, end string) (Stream, error) {
@@ -329,7 +346,12 @@ func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream
 
 	notifyCh := make(chan xreadEvent, len(keys))
 	for _, pair := range keys {
-		s.xreadQueue[pair[0]] = append(s.xreadQueue[pair[0]], xreadListener{notify: notifyCh})
+		id, ok := parseXreadStreamId(pair[1])
+		if !ok {
+			return []Stream{}, fmt.Errorf("ERR invalid stream id %s", pair[1])
+		}
+
+		s.xreadQueue[pair[0]] = append(s.xreadQueue[pair[0]], xreadListener{notify: notifyCh, id: id})
 	}
 
 	s.Unlock()
