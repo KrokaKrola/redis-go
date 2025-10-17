@@ -6,15 +6,21 @@ import (
 	"strings"
 )
 
-func (m innerMap) xread(keys [][]string) ([]Stream, error) {
+func (m innerMap) xread(keys [][]string, returnOnFoundElements bool) ([]Stream, error) {
 	streams := []Stream{}
 
 	for _, key := range keys {
 		id := key[1]
+
 		streamIdSpec, ok := parseXreadStreamId(id)
 
 		if !ok {
 			return streams, fmt.Errorf("ERR invalid stream id")
+		}
+
+		if streamIdSpec.IsMax && !returnOnFoundElements {
+			streams = append(streams, Stream{})
+			continue
 		}
 
 		keyValue := key[0]
@@ -58,6 +64,10 @@ func (m innerMap) xread(keys [][]string) ([]Stream, error) {
 }
 
 func parseXreadStreamId(id string) (spec StreamIdSpec, ok bool) {
+	if id == "$" {
+		return StreamIdSpec{IsMax: true}, true
+	}
+
 	before, after, found := strings.Cut(id, "-")
 
 	if !found {

@@ -19,8 +19,9 @@ type blpopListener struct {
 }
 
 type xreadEvent struct {
-	key string
-	id  storedStreamId
+	element StreamElement
+	isMax   bool
+	key     string
 }
 
 type xreadListener struct {
@@ -289,6 +290,14 @@ func (s *Store) produceXaddEvents(key string, newElement StreamElement) {
 	if len(listeners) > 0 {
 		remaining := []xreadListener{}
 		for _, listener := range listeners {
+			event := xreadEvent{element: newElement, key: key}
+
+			if listener.id.IsMax {
+				event.isMax = true
+				listener.notify <- event
+				continue
+			}
+
 			if newElement.Id.MsTime < listener.id.MsTime {
 				remaining = append(remaining, listener)
 				continue
@@ -299,7 +308,6 @@ func (s *Store) produceXaddEvents(key string, newElement StreamElement) {
 				continue
 			}
 
-			event := xreadEvent{key: key, id: newElement.Id}
 			listener.notify <- event
 		}
 
@@ -321,7 +329,7 @@ func (s *Store) Xrange(key string, start string, end string) (Stream, error) {
 func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream, error) {
 	s.Lock()
 
-	streams, err := s.xread(keys)
+	streams, err := s.xread(keys, false)
 
 	if err != nil {
 		s.Unlock()
@@ -390,10 +398,26 @@ func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream
 	}
 
 	select {
-	case <-notifyCh:
+	case event := <-notifyCh:
 		s.Lock()
 
-		streams, err := s.xread(keys)
+		if event.isMax {
+			cleanup()
+			s.Unlock()
+			streams := []Stream{}
+
+			for _, pair := range keys {
+				if pair[0] == event.key {
+					streams = append(streams, Stream{Elements: []StreamElement{event.element}})
+				} else {
+					streams = append(streams, Stream{})
+				}
+			}
+
+			return streams, nil
+		}
+
+		streams, err := s.xread(keys, true)
 
 		cleanup()
 		s.Unlock()
