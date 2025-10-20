@@ -90,9 +90,13 @@ func TestHandleIncr(t *testing.T) {
 		}
 
 		out = Dispatch(cmd, store)
-		_, ok := out.(*resp.Error)
+		err, ok := out.(*resp.Error)
 		if !ok {
 			t.Fatal("expected resp.Error from INCR command Dispatch response")
+		}
+
+		if err.Msg != "ERR value is not an integer or out of range" {
+			t.Fatal("unexpected resp.Error.Msg from INCR command Dispatch response")
 		}
 	})
 }

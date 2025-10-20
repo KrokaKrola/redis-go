@@ -20,7 +20,7 @@ func (m innerMap) incr(key string) (list int64, err error) {
 
 	valueInt, err := strconv.ParseInt(string(value.Bytes), 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("WRONGTYPE Operation against a key holding the wrong kind of value")
+		return 0, fmt.Errorf("ERR value is not an integer or out of range")
 	}
 
 	valueInt += 1
