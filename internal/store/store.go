@@ -432,3 +432,10 @@ func (s *Store) Xread(keys [][]string, timeoutMs int, isBlocking bool) ([]Stream
 		return []Stream{}, nil
 	}
 }
+
+func (s *Store) Incr(key string) (int64, error) {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.incr(key)
+}

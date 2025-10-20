@@ -1,3 +1,4 @@
 .gocache
 .cache
 __debug*
+.gomodcache
