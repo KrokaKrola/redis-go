@@ -9,24 +9,28 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/commands"
 	"github.com/codecrafters-io/redis-starter-go/internal/logger"
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
+	"github.com/codecrafters-io/redis-starter-go/internal/transactions"
 )
 
 type RedisServer struct {
-	port     uint16
-	listener net.Listener
-	store    *store.Store
+	port         uint16
+	listener     net.Listener
+	store        *store.Store
+	transactions *transactions.Transactions
 }
 
 func NewRedisServer(port uint16) *RedisServer {
 	return &RedisServer{
-		port:  port,
-		store: store.NewStore(),
+		port:         port,
+		store:        store.NewStore(),
+		transactions: transactions.NewTransactions(),
 	}
 }
 
@@ -74,6 +78,8 @@ func (r *RedisServer) acceptConnections() {
 	}
 }
 
+var nextClientId int64
+
 func (r *RedisServer) handleConnection(conn net.Conn) {
 	defer conn.Close()
 	logger.Debug("accepted new connection", "RemoteAddr", conn.RemoteAddr())
@@ -83,6 +89,8 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 	encoder := resp.NewEncoder(writer)
 	defer writer.Flush()
 
+	id := fmt.Sprintf("%d-%s", atomic.AddInt64(&nextClientId, 1), conn.RemoteAddr().String())
+
 	for {
 		value, derr := decoder.Read()
 
@@ -90,6 +98,7 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 
 		if derr != nil {
 			if errors.Is(derr, io.EOF) {
+				r.transactions.CleanupTransactionById(id)
 				break
 			}
 
@@ -105,15 +114,31 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 		if perr != nil {
 			encoder.Write(&resp.Error{Msg: perr.Error()})
 		} else {
-			out := commands.Dispatch(cmd, r.store)
-			logger.Debug("commands.Dispatch result", slog.Any("out", out))
+			var out resp.Value
 
-			if err := encoder.Write(out); err != nil {
+			transactionsList, ok := r.transactions.GetTransactionsById(id)
+			if ok {
+				transactionsList = append(transactionsList, cmd)
+				r.transactions.UpdateTransactionsListById(id, transactionsList)
+				out = &resp.SimpleString{Bytes: []byte("QUEUED")}
+			} else {
+				out = commands.Dispatch(cmd, r.store)
+				logger.Debug("commands.Dispatch result", slog.Any("out", out))
+			}
+
+			err := encoder.Write(out)
+			if err != nil {
 				encoder.Write(&resp.Error{Msg: fmt.Sprintf("ERR encoder failed to write a response: %T", err.Error())})
+			} else {
+				if cmd.Name == commands.MULTI_COMMAND {
+					r.transactions.NewTransactionsListById(id, cmd)
+				}
 			}
 
 		}
 
 		writer.Flush()
 	}
+
+	r.transactions.CleanupTransactionById(id)
 }
