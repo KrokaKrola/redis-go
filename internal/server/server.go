@@ -117,10 +117,12 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 			var out resp.Value
 
 			transactionsList, ok := r.transactions.GetTransactionsById(id)
-			if ok {
+			if ok && cmd.Name != commands.EXEC_COMMAND {
 				transactionsList = append(transactionsList, cmd)
 				r.transactions.UpdateTransactionsListById(id, transactionsList)
 				out = &resp.SimpleString{Bytes: []byte("QUEUED")}
+			} else if !ok && cmd.Name == commands.EXEC_COMMAND {
+				out = &resp.Error{Msg: "ERR EXEC without multi"}
 			} else {
 				out = commands.Dispatch(cmd, r.store)
 				logger.Debug("commands.Dispatch result", slog.Any("out", out))

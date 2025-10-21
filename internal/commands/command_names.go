@@ -21,6 +21,7 @@ const (
 	XREAD_COMMAND  Name = "XREAD"
 	INCR_COMMAND   Name = "INCR"
 	MULTI_COMMAND  Name = "MULTI"
+	EXEC_COMMAND   Name = "EXEC"
 )
 
 var commandByName = map[string]Name{
@@ -40,6 +41,7 @@ var commandByName = map[string]Name{
 	string(XREAD_COMMAND):  XREAD_COMMAND,
 	string(INCR_COMMAND):   INCR_COMMAND,
 	string(MULTI_COMMAND):  MULTI_COMMAND,
+	string(EXEC_COMMAND):   EXEC_COMMAND,
 }
 
 func getCommandName(name []byte) Name {
