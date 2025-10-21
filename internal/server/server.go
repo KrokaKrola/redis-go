@@ -118,11 +118,12 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 
 			transactionsList, ok := r.transactions.GetTransactionsById(id)
 			if ok && cmd.Name != commands.EXEC_COMMAND {
+				logger.Debug("queueing command into the transactions list", slog.Any("cmd", cmd))
 				transactionsList = append(transactionsList, cmd)
 				r.transactions.UpdateTransactionsListById(id, transactionsList)
 				out = &resp.SimpleString{Bytes: []byte("QUEUED")}
 			} else if !ok && cmd.Name == commands.EXEC_COMMAND {
-				out = &resp.Error{Msg: "ERR EXEC without multi"}
+				out = &resp.Error{Msg: "ERR EXEC without MULTI"}
 			} else {
 				out = commands.Dispatch(cmd, r.store)
 				logger.Debug("commands.Dispatch result", slog.Any("out", out))
@@ -131,12 +132,9 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 			err := encoder.Write(out)
 			if err != nil {
 				encoder.Write(&resp.Error{Msg: fmt.Sprintf("ERR encoder failed to write a response: %T", err.Error())})
-			} else {
-				if cmd.Name == commands.MULTI_COMMAND {
-					r.transactions.NewTransactionsListById(id, cmd)
-				}
+			} else if cmd.Name == commands.MULTI_COMMAND {
+				r.transactions.NewTransactionsListById(id, cmd)
 			}
-
 		}
 
 		writer.Flush()
