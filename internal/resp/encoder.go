@@ -62,18 +62,23 @@ func (e *Encoder) Write(v Value) error {
 		}
 
 		for _, v := range v.Elements {
-			switch v := v.(type) {
-			case *BulkString:
-				if _, err := fmt.Fprintf(e.w, "$%d\r\n%s\r\n", len(v.Bytes), v.Bytes); err != nil {
-					return err
-				}
-			case *Array:
-				if err := e.Write(v); err != nil {
-					return err
-				}
-			default:
-				return fmt.Errorf("MISSTYPE of the element in the underlying array")
+			err := e.Write(v)
+			if err != nil {
+				return err
 			}
+			// switch v := v.(type) {
+			// case *BulkString:
+			// 	if _, err := fmt.Fprintf(e.w, "$%d\r\n%s\r\n", len(v.Bytes), v.Bytes); err != nil {
+			// 		return err
+			// 	}
+			// case *Array:
+			// 	if err := e.Write(v); err != nil {
+			// 		return err
+			// 	}
+
+			// default:
+			// 	return fmt.Errorf("MISSTYPE of the element in the underlying array")
+			// }
 
 		}
 	default:

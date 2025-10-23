@@ -136,22 +136,6 @@ func TestEncoder_Write_Array_Null(t *testing.T) {
 	}
 }
 
-// TestEncoder_Write_Array_MissType ensuges that an array
-// is encoded as a valid value if array is empty
-func TestEncoder_Write_Array_MissType(t *testing.T) {
-	var buf bytes.Buffer
-	enc := NewEncoder(&buf)
-
-	if err := enc.Write(&Array{
-		Elements: []Value{
-			&BulkString{Bytes: []byte("a")},
-			&Integer{Number: 5},
-		},
-	}); err == nil {
-		t.Fatalf("expected error for decoding invalid array type, got nil")
-	}
-}
-
 func TestEncoder_Write_Inner_Arrays(t *testing.T) {
 	var buf bytes.Buffer
 	enc := NewEncoder(&buf)

@@ -28,7 +28,7 @@ func (t *Transactions) CleanupTransactionById(id string) {
 	delete(t.innerMap, id)
 }
 
-func (t *Transactions) GetTransactionsById(id string) (commandsList, bool) {
+func (t *Transactions) GetTransactionById(id string) (commandsList, bool) {
 	t.Lock()
 	defer t.Unlock()
 
@@ -37,18 +37,18 @@ func (t *Transactions) GetTransactionsById(id string) (commandsList, bool) {
 	return list, ok
 }
 
-func (t *Transactions) UpdateTransactionsListById(id string, list commandsList) {
+func (t *Transactions) UpdateTransactionById(id string, list commandsList) {
 	t.Lock()
 	defer t.Unlock()
 
-	list, ok := t.innerMap[id]
+	_, ok := t.innerMap[id]
 	if ok {
 		t.innerMap[id] = list
 	}
 }
 
-func (t *Transactions) NewTransactionsListById(id string, cmd *commands.Command) {
+func (t *Transactions) NewTransactionsListById(id string) {
 	t.Lock()
 	defer t.Unlock()
-	t.innerMap[id] = []*commands.Command{cmd}
+	t.innerMap[id] = []*commands.Command{}
 }
