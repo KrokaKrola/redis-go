@@ -118,12 +118,19 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 
 			commandsList, ok := r.transactions.GetTransactionById(id)
 			if ok && cmd.Name != commands.EXEC_COMMAND {
-				logger.Debug("queueing command into the transactions list", slog.Any("cmd", cmd))
-				commandsList = append(commandsList, cmd)
-				r.transactions.UpdateTransactionById(id, commandsList)
-				out = &resp.SimpleString{Bytes: []byte("QUEUED")}
+				if cmd.Name == commands.DISCARD_COMMAND {
+					r.transactions.CleanupTransactionById(id)
+					out = commands.Dispatch(cmd, r.store)
+				} else {
+					logger.Debug("queueing command into the transactions list", slog.Any("cmd", cmd))
+					commandsList = append(commandsList, cmd)
+					r.transactions.UpdateTransactionById(id, commandsList)
+					out = &resp.SimpleString{Bytes: []byte("QUEUED")}
+				}
 			} else if !ok && cmd.Name == commands.EXEC_COMMAND {
 				out = &resp.Error{Msg: "ERR EXEC without MULTI"}
+			} else if !ok && cmd.Name == commands.DISCARD_COMMAND {
+				out = &resp.Error{Msg: "ERR DISCARD without MULTI"}
 			} else if ok && cmd.Name == commands.EXEC_COMMAND {
 				logger.Debug("executing transaction commands list of", slog.Int("commands-length", len(commandsList)))
 				arr := &resp.Array{}
