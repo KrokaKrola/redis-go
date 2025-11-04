@@ -1,9 +1,11 @@
 package transactions
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/commands"
+	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 )
 
 type Transactions struct {
@@ -15,40 +17,68 @@ type commandsList []*commands.Command
 
 type transactionsMap map[string]commandsList
 
+type Executor func(*commands.Command) resp.Value
+
 func NewTransactions() *Transactions {
 	return &Transactions{
 		innerMap: make(transactionsMap),
 	}
 }
 
-func (t *Transactions) CleanupTransactionById(id string) {
-	t.Lock()
-	defer t.Unlock()
+func (t *Transactions) IsActive(id string) bool {
+	t.RLock()
+	defer t.RUnlock()
 
-	delete(t.innerMap, id)
+	_, ok := t.innerMap[id]
+
+	return ok
 }
 
-func (t *Transactions) GetTransactionById(id string) (commandsList, bool) {
+func (t *Transactions) Begin(id string) {
+	t.Lock()
+	defer t.Unlock()
+	t.innerMap[id] = []*commands.Command{}
+}
+
+func (t *Transactions) Queue(id string, cmd *commands.Command) error {
 	t.Lock()
 	defer t.Unlock()
 
 	list, ok := t.innerMap[id]
-
-	return list, ok
-}
-
-func (t *Transactions) UpdateTransactionById(id string, list commandsList) {
-	t.Lock()
-	defer t.Unlock()
-
-	_, ok := t.innerMap[id]
-	if ok {
-		t.innerMap[id] = list
+	if !ok {
+		return fmt.Errorf("ERR unknown session id")
 	}
+
+	list = append(list, cmd)
+	t.innerMap[id] = list
+
+	return nil
 }
 
-func (t *Transactions) NewTransactionsListById(id string) {
+func (t *Transactions) ExecuteAndDiscard(id string, executor Executor) *resp.Array {
 	t.Lock()
 	defer t.Unlock()
-	t.innerMap[id] = []*commands.Command{}
+
+	arr := &resp.Array{}
+
+	list, ok := t.innerMap[id]
+
+	if !ok {
+		return arr
+	}
+
+	for _, command := range list {
+		arr.Elements = append(arr.Elements, executor(command))
+	}
+
+	delete(t.innerMap, id)
+
+	return arr
+}
+
+func (t *Transactions) Discard(id string) {
+	t.Lock()
+	defer t.Unlock()
+
+	delete(t.innerMap, id)
 }

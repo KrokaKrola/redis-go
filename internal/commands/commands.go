@@ -103,13 +103,12 @@ var handlers = map[Name]handlerFn{
 	XREAD_COMMAND:   handleXread,
 	INCR_COMMAND:    handleIncr,
 	MULTI_COMMAND:   handleMulti,
-	EXEC_COMMAND:    handleExec,
 	DISCARD_COMMAND: handleDiscard,
 }
 
-func Dispatch(cmd *Command, s *store.Store) resp.Value {
+func Dispatch(cmd *Command, store *store.Store) resp.Value {
 	if handler, ok := handlers[cmd.Name]; ok {
-		return handler(cmd, s)
+		return handler(cmd, store)
 	}
 
 	return &resp.Error{Msg: fmt.Sprintf("ERR handler for %s is not implemented", cmd.Name)}

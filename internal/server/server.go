@@ -1,20 +1,14 @@
 package server
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"io"
-	"log/slog"
 	"net"
 	"os"
 	"os/signal"
-	"sync/atomic"
 	"syscall"
 
-	"github.com/codecrafters-io/redis-starter-go/internal/commands"
 	"github.com/codecrafters-io/redis-starter-go/internal/logger"
-	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 	"github.com/codecrafters-io/redis-starter-go/internal/transactions"
 )
@@ -78,85 +72,7 @@ func (r *RedisServer) acceptConnections() {
 	}
 }
 
-var nextClientId int64
-
 func (r *RedisServer) handleConnection(conn net.Conn) {
-	defer conn.Close()
-	logger.Debug("accepted new connection", "RemoteAddr", conn.RemoteAddr())
-	reader := bufio.NewReader(conn)
-	writer := bufio.NewWriter(conn)
-	decoder := resp.NewDecoder(reader)
-	encoder := resp.NewEncoder(writer)
-	defer writer.Flush()
-
-	id := fmt.Sprintf("%d-%s", atomic.AddInt64(&nextClientId, 1), conn.RemoteAddr().String())
-
-	for {
-		value, derr := decoder.Read()
-
-		logger.Debug("decoder.Read result", slog.Any("value", value), slog.Any("derr", derr))
-
-		if derr != nil {
-			if errors.Is(derr, io.EOF) {
-				r.transactions.CleanupTransactionById(id)
-				break
-			}
-
-			encoder.Write(&resp.Error{Msg: "ERR protocol error"})
-			writer.Flush()
-			continue
-		}
-
-		cmd, perr := commands.Parse(value)
-
-		logger.Debug("commands.Parse result", slog.Any("cmd", cmd), slog.Any("perr", perr))
-
-		if perr != nil {
-			encoder.Write(&resp.Error{Msg: perr.Error()})
-		} else {
-			var out resp.Value
-
-			commandsList, ok := r.transactions.GetTransactionById(id)
-			if ok && cmd.Name != commands.EXEC_COMMAND {
-				if cmd.Name == commands.DISCARD_COMMAND {
-					r.transactions.CleanupTransactionById(id)
-					out = commands.Dispatch(cmd, r.store)
-				} else {
-					logger.Debug("queueing command into the transactions list", slog.Any("cmd", cmd))
-					commandsList = append(commandsList, cmd)
-					r.transactions.UpdateTransactionById(id, commandsList)
-					out = &resp.SimpleString{Bytes: []byte("QUEUED")}
-				}
-			} else if !ok && cmd.Name == commands.EXEC_COMMAND {
-				out = &resp.Error{Msg: "ERR EXEC without MULTI"}
-			} else if !ok && cmd.Name == commands.DISCARD_COMMAND {
-				out = &resp.Error{Msg: "ERR DISCARD without MULTI"}
-			} else if ok && cmd.Name == commands.EXEC_COMMAND {
-				logger.Debug("executing transaction commands list of", slog.Int("commands-length", len(commandsList)))
-				arr := &resp.Array{}
-
-				for _, command := range commandsList {
-					out = commands.Dispatch(command, r.store)
-					arr.Elements = append(arr.Elements, out)
-				}
-
-				out = arr
-				r.transactions.CleanupTransactionById(id)
-			} else {
-				out = commands.Dispatch(cmd, r.store)
-				logger.Debug("commands.Dispatch result", slog.Any("out", out))
-			}
-
-			err := encoder.Write(out)
-			if err != nil {
-				encoder.Write(&resp.Error{Msg: fmt.Sprintf("ERR encoder failed to write a response: %T", err.Error())})
-			} else if cmd.Name == commands.MULTI_COMMAND {
-				r.transactions.NewTransactionsListById(id)
-			}
-		}
-
-		writer.Flush()
-	}
-
-	r.transactions.CleanupTransactionById(id)
+	session := NewSession(conn, r.store, r.transactions)
+	session.Run()
 }
