@@ -24,7 +24,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := server.NewRedisServer(port)
+	s := server.NewRedisServer(port, false)
 
 	err := s.Listen()
 

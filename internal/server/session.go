@@ -25,11 +25,12 @@ type Session struct {
 	encoder      *resp.Encoder
 	writer       *bufio.Writer
 	reader       *bufio.Reader
+	isReplica    bool
 }
 
 var nextClientId int64
 
-func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Transactions) *Session {
+func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Transactions, isReplica bool) *Session {
 	id := fmt.Sprintf("%d-%s", atomic.AddInt64(&nextClientId, 1), conn.RemoteAddr().String())
 
 	reader := bufio.NewReader(conn)
@@ -46,6 +47,7 @@ func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Tr
 		encoder:      encoder,
 		writer:       writer,
 		reader:       reader,
+		isReplica:    isReplica,
 	}
 }
 
@@ -126,12 +128,12 @@ func (s *Session) executeCommand(cmd *commands.Command) resp.Value {
 		return &resp.SimpleString{Bytes: []byte("QUEUED")}
 	}
 
-	return commands.Dispatch(cmd, s.store)
+	return commands.Dispatch(cmd, s.store, s.isReplica)
 }
 
 func (s *Session) handleMulti(cmd *commands.Command) resp.Value {
 	if !s.transactions.IsActive(s.id) {
-		out := commands.Dispatch(cmd, s.store)
+		out := commands.Dispatch(cmd, s.store, s.isReplica)
 
 		switch out.(type) {
 		case *resp.Error:
@@ -151,7 +153,7 @@ func (s *Session) handleExec() resp.Value {
 	}
 
 	return s.transactions.ExecuteAndDiscard(s.id, func(c *commands.Command) resp.Value {
-		return commands.Dispatch(c, s.store)
+		return commands.Dispatch(c, s.store, s.isReplica)
 	})
 }
 
@@ -162,5 +164,5 @@ func (s *Session) handleDiscard(cmd *commands.Command) resp.Value {
 
 	s.transactions.Discard(s.id)
 
-	return commands.Dispatch(cmd, s.store)
+	return commands.Dispatch(cmd, s.store, s.isReplica)
 }

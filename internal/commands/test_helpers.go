@@ -24,7 +24,7 @@ func createListWithValues(t *testing.T, s *store.Store, key string, values []str
 		Args: args,
 	}
 
-	out := Dispatch(cmd, s)
+	out := Dispatch(cmd, s, false)
 	if _, ok := out.(*resp.Error); ok {
 		t.Fatalf("unexpected error, got %T", out)
 	}
@@ -39,7 +39,7 @@ func createKeyWithValueForIndefiniteTime(t *testing.T, store *store.Store, key s
 		},
 	}
 
-	if out := Dispatch(setCmd, store); true {
+	if out := Dispatch(setCmd, store, false); true {
 		ss, ok := out.(*resp.SimpleString)
 		if !ok {
 			t.Fatalf("expected *resp.SimpleString from SET, got %T", out)
@@ -61,7 +61,7 @@ func createKeyWithValueForLimitedTime(t *testing.T, store *store.Store, key stri
 		},
 	}
 
-	if out := Dispatch(setCmd, store); true {
+	if out := Dispatch(setCmd, store, false); true {
 		ss, ok := out.(*resp.SimpleString)
 		if !ok {
 			t.Fatalf("expected *resp.SimpleString from SET, got %T", out)
@@ -84,7 +84,7 @@ func assertListEquals(t *testing.T, s *store.Store, key string, want []string) {
 		},
 	}
 
-	out := Dispatch(cmd, s)
+	out := Dispatch(cmd, s, false)
 
 	arr, ok := out.(*resp.Array)
 	if !ok {
@@ -157,7 +157,7 @@ func addEntriesToStore(t *testing.T, s *store.Store, key string, entries []struc
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		bs, ok := out.(*resp.BulkString)
 		if !ok {
 			t.Fatalf("expected BulkString from XADD, got %T", out)

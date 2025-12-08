@@ -82,9 +82,20 @@ func newCommandFromRespArray(arr *resp.Array) (*Command, error) {
 	}
 
 	return cmd, nil
+
 }
 
-type handlerFn func(*Command, *store.Store) resp.Value
+type serverConfig struct {
+	isReplica bool
+}
+
+type handlerData struct {
+	cmd    *Command
+	store  *store.Store
+	config *serverConfig
+}
+
+type handlerFn func(handlerData) resp.Value
 
 var handlers = map[Name]handlerFn{
 	PING_COMMAND:    handlePing,
@@ -104,11 +115,18 @@ var handlers = map[Name]handlerFn{
 	INCR_COMMAND:    handleIncr,
 	MULTI_COMMAND:   handleMulti,
 	DISCARD_COMMAND: handleDiscard,
+	INFO_COMMAND:    handleInfo,
 }
 
-func Dispatch(cmd *Command, store *store.Store) resp.Value {
+func Dispatch(cmd *Command, store *store.Store, isReplica bool) resp.Value {
 	if handler, ok := handlers[cmd.Name]; ok {
-		return handler(cmd, store)
+		return handler(handlerData{
+			cmd:   cmd,
+			store: store,
+			config: &serverConfig{
+				isReplica: isReplica,
+			},
+		})
 	}
 
 	return &resp.Error{Msg: fmt.Sprintf("ERR handler for %s is not implemented", cmd.Name)}

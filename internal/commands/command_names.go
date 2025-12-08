@@ -23,6 +23,7 @@ const (
 	MULTI_COMMAND   Name = "MULTI"
 	EXEC_COMMAND    Name = "EXEC"
 	DISCARD_COMMAND Name = "DISCARD"
+	INFO_COMMAND    Name = "INFO"
 )
 
 var commandByName = map[string]Name{
@@ -44,6 +45,7 @@ var commandByName = map[string]Name{
 	string(MULTI_COMMAND):   MULTI_COMMAND,
 	string(EXEC_COMMAND):    EXEC_COMMAND,
 	string(DISCARD_COMMAND): DISCARD_COMMAND,
+	string(INFO_COMMAND):    INFO_COMMAND,
 }
 
 func getCommandName(name []byte) Name {

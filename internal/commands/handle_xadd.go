@@ -8,19 +8,19 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
 
-func handleXadd(cmd *Command, store *store.Store) resp.Value {
-	argsLen := cmd.ArgsLen()
+func handleXadd(data handlerData) resp.Value {
+	argsLen := data.cmd.ArgsLen()
 
 	if argsLen < 4 {
 		return &resp.Error{Msg: "ERR invalid number of arguments for XADD command"}
 	}
 
-	key, ok := cmd.ArgString(0)
+	key, ok := data.cmd.ArgString(0)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid key value for XADD command"}
 	}
 
-	sId, ok := cmd.ArgString(1)
+	sId, ok := data.cmd.ArgString(1)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid stream-id value for XADD command"}
 	}
@@ -38,7 +38,7 @@ func handleXadd(cmd *Command, store *store.Store) resp.Value {
 		}
 	}
 
-	restArgs := cmd.Args[2:]
+	restArgs := data.cmd.Args[2:]
 
 	if len(restArgs)%2 != 0 {
 		return &resp.Error{Msg: "ERR invalid number of arguments for XADD command"}
@@ -47,12 +47,12 @@ func handleXadd(cmd *Command, store *store.Store) resp.Value {
 	fields := [][]string{}
 
 	for i := 0; i < len(restArgs); i += 2 {
-		entryKey, okKey := cmd.ArgString(2 + i)
+		entryKey, okKey := data.cmd.ArgString(2 + i)
 		if !okKey {
 			return &resp.Error{Msg: "ERR invalid key-pair key value for XADD command"}
 		}
 
-		entryValue, okValue := cmd.ArgString(2 + i + 1)
+		entryValue, okValue := data.cmd.ArgString(2 + i + 1)
 		if !okValue {
 			return &resp.Error{Msg: "ERR invalid key-pair value for XADD command"}
 		}
@@ -60,7 +60,7 @@ func handleXadd(cmd *Command, store *store.Store) resp.Value {
 		fields = append(fields, []string{entryKey, entryValue})
 	}
 
-	id, err := store.Xadd(key, streamId, fields)
+	id, err := data.store.Xadd(key, streamId, fields)
 
 	if err != nil {
 		return &resp.Error{Msg: err.Error()}

@@ -4,17 +4,16 @@ import (
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
-	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
 
-func handleXread(cmd *Command, store *store.Store) resp.Value {
-	argsLen := cmd.ArgsLen()
+func handleXread(data handlerData) resp.Value {
+	argsLen := data.cmd.ArgsLen()
 
 	if argsLen < 1 {
 		return &resp.Error{Msg: "ERR invalid number of arguments for XREAD command"}
 	}
 
-	cmdIdentifier, ok := cmd.ArgString(0)
+	cmdIdentifier, ok := data.cmd.ArgString(0)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid identifier for XREAD command"}
 	}
@@ -30,13 +29,13 @@ func handleXread(cmd *Command, store *store.Store) resp.Value {
 	blockingTimeoutMs := 0
 
 	if isBlocking {
-		blockingTimeoutMs, ok = cmd.ArgInt(1)
+		blockingTimeoutMs, ok = data.cmd.ArgInt(1)
 
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid BLOCK timeout value for XREAD command"}
 		}
 
-		streamsKeyword, ok := cmd.ArgString(2)
+		streamsKeyword, ok := data.cmd.ArgString(2)
 		if !ok || !strings.EqualFold(streamsKeyword, "streams") {
 			return &resp.Error{Msg: "ERR invalid STREAMS identifier for XREAD command"}
 		}
@@ -61,12 +60,12 @@ func handleXread(cmd *Command, store *store.Store) resp.Value {
 	}
 
 	for i := range pairsCount {
-		storeKey, ok := cmd.ArgString(i + streamsKeyIdsOffset)
+		storeKey, ok := data.cmd.ArgString(i + streamsKeyIdsOffset)
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid stream name value for XREAD command"}
 		}
 
-		streamId, ok := cmd.ArgString(i + pairsCount + streamsKeyIdsOffset)
+		streamId, ok := data.cmd.ArgString(i + pairsCount + streamsKeyIdsOffset)
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid stream id value for XREAD command"}
 		}
@@ -74,7 +73,7 @@ func handleXread(cmd *Command, store *store.Store) resp.Value {
 		streamKeyIdPairs = append(streamKeyIdPairs, []string{storeKey, streamId})
 	}
 
-	streams, err := store.Xread(streamKeyIdPairs, blockingTimeoutMs, isBlocking)
+	streams, err := data.store.Xread(streamKeyIdPairs, blockingTimeoutMs, isBlocking)
 	if err != nil {
 		return &resp.Error{Msg: err.Error()}
 	}

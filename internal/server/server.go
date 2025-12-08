@@ -23,13 +23,15 @@ type RedisServer struct {
 	store        *store.Store
 	transactions *transactions.Transactions
 	wg           sync.WaitGroup // tracks active connections
+	isReplica    bool
 }
 
-func NewRedisServer(port int) *RedisServer {
+func NewRedisServer(port int, isReplica bool) *RedisServer {
 	return &RedisServer{
 		port:         port,
 		store:        store.NewStore(),
 		transactions: transactions.NewTransactions(),
+		isReplica:    isReplica,
 	}
 }
 
@@ -99,6 +101,6 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	session := NewSession(conn, r.store, r.transactions)
+	session := NewSession(conn, r.store, r.transactions, r.isReplica)
 	session.Run()
 }
