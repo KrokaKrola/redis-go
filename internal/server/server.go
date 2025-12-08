@@ -6,21 +6,26 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/logger"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 	"github.com/codecrafters-io/redis-starter-go/internal/transactions"
 )
 
+const shutdownTimeout = 5 * time.Second
+
 type RedisServer struct {
-	port         uint16
+	port         int
 	listener     net.Listener
 	store        *store.Store
 	transactions *transactions.Transactions
+	wg           sync.WaitGroup // tracks active connections
 }
 
-func NewRedisServer(port uint16) *RedisServer {
+func NewRedisServer(port int) *RedisServer {
 	return &RedisServer{
 		port:         port,
 		store:        store.NewStore(),
@@ -38,7 +43,7 @@ func (r *RedisServer) Listen() error {
 		return err
 	}
 
-	defer l.Close()
+	r.listener = l
 
 	logger.Info("Started server",
 		"address", l.Addr(),
@@ -48,9 +53,27 @@ func (r *RedisServer) Listen() error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	r.listener = l
 	go r.acceptConnections()
+
 	<-sigChan
+	logger.Info("Shutdown signal received, stopping server...")
+
+	// Stop accepting new connections
+	l.Close()
+
+	// Wait for active connections to finish (with timeout)
+	done := make(chan struct{})
+	go func() {
+		r.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.Info("All connections closed gracefully")
+	case <-time.After(shutdownTimeout):
+		logger.Warn("Shutdown timeout reached, forcing exit")
+	}
 
 	return nil
 }
@@ -73,6 +96,9 @@ func (r *RedisServer) acceptConnections() {
 }
 
 func (r *RedisServer) handleConnection(conn net.Conn) {
+	r.wg.Add(1)
+	defer r.wg.Done()
+
 	session := NewSession(conn, r.store, r.transactions)
 	session.Run()
 }

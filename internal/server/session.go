@@ -98,7 +98,7 @@ func (s *Session) Run() {
 
 		err := s.encoder.Write(out)
 		if err != nil {
-			s.encoder.Write(&resp.Error{Msg: fmt.Sprintf("ERR encoder failed to write a response: %T", err.Error())})
+			s.encoder.Write(&resp.Error{Msg: fmt.Sprintf("ERR encoder failed to write a response: %s", err.Error())})
 		}
 
 		s.writer.Flush()
