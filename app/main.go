@@ -15,8 +15,10 @@ func main() {
 	logger.Init(slog.LevelDebug, "text")
 
 	var port int
+	var replicaOf string
 
 	flag.IntVar(&port, "port", defaultPortValue, "Defines port number for redis server")
+	flag.StringVar(&replicaOf, "replicaof", "", "Defines replica host and port")
 	flag.Parse()
 
 	if port < 1 || port > 65535 {
@@ -24,7 +26,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := server.NewRedisServer(port, false)
+	isReplica := replicaOf != ""
+
+	s := server.NewRedisServer(port, isReplica)
 
 	err := s.Listen()
 
