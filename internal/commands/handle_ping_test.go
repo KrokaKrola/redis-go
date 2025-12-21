@@ -52,7 +52,7 @@ func TestDispatch_PING_WithArg_ReturnsBulkString(t *testing.T) {
 		Args: []resp.Value{&resp.BulkString{Bytes: []byte("hello")}},
 	}
 
-	out := Dispatch(cmd, store.NewStore())
+	out := Dispatch(cmd, store.NewStore(), false)
 	bs, ok := out.(*resp.BulkString)
 	if !ok {
 		t.Fatalf("expected BulkString, got %T", out)
@@ -76,7 +76,7 @@ func TestDispatch_PING_TooManyArgs(t *testing.T) {
 		},
 	}
 
-	out := Dispatch(cmd, store.NewStore())
+	out := Dispatch(cmd, store.NewStore(), false)
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error for too many args, got %T", out)
 	}

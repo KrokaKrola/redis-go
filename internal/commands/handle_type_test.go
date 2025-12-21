@@ -12,7 +12,7 @@ func TestDispatch_Type_WrongArgCount(t *testing.T) {
 	store := store.NewStore()
 	cmd := &Command{Name: TYPE_COMMAND}
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error for missing key argument, got %T", out)
 	}
@@ -25,7 +25,7 @@ func TestDispatch_Type_InvalidKeyType(t *testing.T) {
 		Args: []resp.Value{&resp.Integer{Number: 1}},
 	}
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error for non-string key, got %T", out)
 	}
@@ -38,7 +38,7 @@ func TestDispatch_Type_KeyDoesNotExist(t *testing.T) {
 		Args: []resp.Value{&resp.BulkString{Bytes: []byte("missing")}},
 	}
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 	ss, ok := out.(*resp.SimpleString)
 	if !ok {
 		t.Fatalf("expected *resp.SimpleString, got %T", out)
@@ -58,7 +58,7 @@ func TestDispatch_Type_StringKey(t *testing.T) {
 		Args: []resp.Value{&resp.BulkString{Bytes: []byte("key")}},
 	}
 
-	out := Dispatch(typeCmd, store)
+	out := Dispatch(typeCmd, store, false)
 	ss, ok := out.(*resp.SimpleString)
 	if !ok {
 		t.Fatalf("expected *resp.SimpleString, got %T", out)
@@ -78,7 +78,7 @@ func TestDispatch_Type_ListKey(t *testing.T) {
 		Args: []resp.Value{&resp.BulkString{Bytes: []byte("list")}},
 	}
 
-	out := Dispatch(typeCmd, store)
+	out := Dispatch(typeCmd, store, false)
 	ss, ok := out.(*resp.SimpleString)
 	if !ok {
 		t.Fatalf("expected *resp.SimpleString, got %T", out)
@@ -100,7 +100,7 @@ func TestDispatch_Type_ExpiredKey(t *testing.T) {
 		Args: []resp.Value{&resp.BulkString{Bytes: []byte("expiring")}},
 	}
 
-	out := Dispatch(typeCmd, store)
+	out := Dispatch(typeCmd, store, false)
 	ss, ok := out.(*resp.SimpleString)
 	if !ok {
 		t.Fatalf("expected *resp.SimpleString, got %T", out)

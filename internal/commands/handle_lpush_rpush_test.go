@@ -19,7 +19,7 @@ func TestDispatch_LPUSH(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 	in, ok := out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -39,7 +39,7 @@ func TestDispatch_LPUSH(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 	in, ok = out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -66,7 +66,7 @@ func TestDispatch_LPUSH_MultipleElements(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 	in, ok := out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -87,7 +87,7 @@ func TestDispatch_LPUSH_MultipleElements(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 	in, ok = out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -111,7 +111,7 @@ func TestDispatch_LPUSH_EmptyListError(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error for invalid amount of arguments, got %T", out)
 	}
@@ -131,7 +131,7 @@ func TestDispatch_LPUSH_MissType(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 
 	if _, ok := out.(*resp.SimpleString); !ok {
 		t.Fatalf("expected resp.SimpleString for SET command response, got %T", out)
@@ -145,7 +145,7 @@ func TestDispatch_LPUSH_MissType(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error for LPUSH command response, got %T", out)
@@ -164,7 +164,7 @@ func TestDispatch_RPUSH(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 	in, ok := out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -184,7 +184,7 @@ func TestDispatch_RPUSH(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 	in, ok = out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -211,7 +211,7 @@ func TestDispatch_RPUSH_MultipleElements(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 	in, ok := out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -232,7 +232,7 @@ func TestDispatch_RPUSH_MultipleElements(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 	in, ok = out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -256,7 +256,7 @@ func TestDispatch_RPUSH_EmptyListError(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error for invalid amount of arguments, got %T", out)
 	}
@@ -276,7 +276,7 @@ func TestDispatch_RPUSH_MissType(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 
 	if _, ok := out.(*resp.SimpleString); !ok {
 		t.Fatalf("expected resp.SimpleString for SET command response, got %T", out)
@@ -290,7 +290,7 @@ func TestDispatch_RPUSH_MissType(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error for RPUSH command response, got %T", out)

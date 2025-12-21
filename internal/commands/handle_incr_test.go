@@ -20,7 +20,7 @@ func TestHandleIncr(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, store)
+		out := Dispatch(cmd, store, false)
 		if err, ok := out.(*resp.Error); ok {
 			t.Fatalf("unexpected resp.Error from SET command Dispatch response %s", err)
 		}
@@ -32,7 +32,7 @@ func TestHandleIncr(t *testing.T) {
 			},
 		}
 
-		out = Dispatch(cmd, store)
+		out = Dispatch(cmd, store, false)
 		value, ok := out.(*resp.Integer)
 		if !ok {
 			t.Fatal("unexpected resp.Error from INCR command Dispatch response")
@@ -54,7 +54,7 @@ func TestHandleIncr(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, store)
+		out := Dispatch(cmd, store, false)
 		value, ok := out.(*resp.Integer)
 		if !ok {
 			t.Fatal("unexpected resp.Error from INCR command Dispatch response")
@@ -77,7 +77,7 @@ func TestHandleIncr(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, store)
+		out := Dispatch(cmd, store, false)
 		if err, ok := out.(*resp.Error); ok {
 			t.Fatalf("unexpected resp.Error from SET command Dispatch response %s", err)
 		}
@@ -89,7 +89,7 @@ func TestHandleIncr(t *testing.T) {
 			},
 		}
 
-		out = Dispatch(cmd, store)
+		out = Dispatch(cmd, store, false)
 		err, ok := out.(*resp.Error)
 		if !ok {
 			t.Fatal("expected resp.Error from INCR command Dispatch response")

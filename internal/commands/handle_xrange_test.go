@@ -22,7 +22,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array from XRANGE, got %T", out)
@@ -75,7 +75,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -105,7 +105,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -138,7 +138,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -179,7 +179,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -212,7 +212,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -232,7 +232,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 				&resp.BulkString{Bytes: []byte("value")},
 			},
 		}
-		out := Dispatch(setCmd, s)
+		out := Dispatch(setCmd, s, false)
 		ss, ok := out.(*resp.SimpleString)
 		if !ok || string(ss.Bytes) != "OK" {
 			t.Fatalf("expected SET to return +OK, got %#v", out)
@@ -247,7 +247,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		result := Dispatch(xrangeCmd, s)
+		result := Dispatch(xrangeCmd, s, false)
 		errResp, ok := result.(*resp.Error)
 		if !ok {
 			t.Fatalf("expected Error, got %T", result)
@@ -269,7 +269,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 				&resp.BulkString{Bytes: []byte("value")},
 			},
 		}
-		out := Dispatch(addCmd, s)
+		out := Dispatch(addCmd, s, false)
 		seed, ok := out.(*resp.BulkString)
 		if !ok || string(seed.Bytes) != "1-0" {
 			t.Fatalf("expected XADD to echo id 1-0, got %#v", out)
@@ -284,7 +284,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		result := Dispatch(xrangeCmd, s)
+		result := Dispatch(xrangeCmd, s, false)
 		errResp, ok := result.(*resp.Error)
 		if !ok {
 			t.Fatalf("expected Error, got %T", result)
@@ -306,7 +306,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -339,7 +339,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -372,7 +372,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -405,7 +405,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -427,7 +427,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)
@@ -449,7 +449,7 @@ func TestDispatchXrangeCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s)
+		out := Dispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array, got %T", out)

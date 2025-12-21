@@ -24,7 +24,7 @@ func TestDispatch_LRANGE_Basic(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 
 	if _, ok := out.(*resp.Error); ok {
 		t.Fatalf("unexpected error, got %T", out)
@@ -39,7 +39,7 @@ func TestDispatch_LRANGE_Basic(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 
 	arr, ok := out.(*resp.Array)
 	if !ok {
@@ -83,7 +83,7 @@ func TestDispatch_LRANGE_Another_Basic(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 
 	if _, ok := out.(*resp.Error); ok {
 		t.Fatalf("unexpected error, got %T", out)
@@ -98,7 +98,7 @@ func TestDispatch_LRANGE_Another_Basic(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 
 	arr, ok := out.(*resp.Array)
 	if !ok {
@@ -139,7 +139,7 @@ func TestDispatch_LRANGE_No_Key(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 
 	if arr := out.(*resp.Array); len(arr.Elements) != 0 && arr.Null == false {
 		t.Fatalf("expected array to be Zero length and not Null, got %#v", arr)
@@ -159,7 +159,7 @@ func TestDispatch_LRANGE_Start_Greater_Than_List_Len(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 
 	if _, ok := out.(*resp.Error); ok {
 		t.Fatalf("unexpected error, got %T", out)
@@ -174,7 +174,7 @@ func TestDispatch_LRANGE_Start_Greater_Than_List_Len(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 
 	arr, ok := out.(*resp.Array)
 	if !ok {
@@ -203,7 +203,7 @@ func TestDispatch_LRANGE_Start_IsGreaterThanStop(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 
 	if _, ok := out.(*resp.Error); ok {
 		t.Fatalf("unexpected error, got %T", out)
@@ -218,7 +218,7 @@ func TestDispatch_LRANGE_Start_IsGreaterThanStop(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 
 	arr, ok := out.(*resp.Array)
 	if !ok {
@@ -250,7 +250,7 @@ func TestDispatch_LRANGE_Stop_Is_Greater_Than_List_Length(t *testing.T) {
 
 	store := store.NewStore()
 
-	out := Dispatch(cmd, store)
+	out := Dispatch(cmd, store, false)
 
 	if _, ok := out.(*resp.Error); ok {
 		t.Fatalf("unexpected error, got %T", out)
@@ -265,7 +265,7 @@ func TestDispatch_LRANGE_Stop_Is_Greater_Than_List_Length(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store)
+	out = Dispatch(cmd, store, false)
 
 	arr, ok := out.(*resp.Array)
 	if !ok {
@@ -321,7 +321,7 @@ func TestDispatch_LRANGE_NegativeRange(t *testing.T) {
 
 		store := store.NewStore()
 
-		out := Dispatch(cmd, store)
+		out := Dispatch(cmd, store, false)
 
 		if _, ok := out.(*resp.Error); ok {
 			t.Fatalf("unexpected error, got %T", out)
@@ -336,7 +336,7 @@ func TestDispatch_LRANGE_NegativeRange(t *testing.T) {
 			},
 		}
 
-		out = Dispatch(cmd, store)
+		out = Dispatch(cmd, store, false)
 
 		arr, ok := out.(*resp.Array)
 		if !ok {

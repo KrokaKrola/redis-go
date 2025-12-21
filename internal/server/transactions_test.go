@@ -10,7 +10,7 @@ import (
 )
 
 func TestSingleConnectionTransactionFlow(t *testing.T) {
-	srv := NewRedisServer(0)
+	srv := NewRedisServer(0, false)
 	client := newInMemoryClient(t, srv)
 	t.Cleanup(client.Close)
 
@@ -26,7 +26,7 @@ func TestSingleConnectionTransactionFlow(t *testing.T) {
 }
 
 func TestMultipleConnectionsTransactionFlow(t *testing.T) {
-	srv := NewRedisServer(0)
+	srv := NewRedisServer(0, false)
 
 	client1 := newInMemoryClient(t, srv)
 	t.Cleanup(client1.Close)
