@@ -30,6 +30,14 @@ func main() {
 
 	s := server.NewRedisServer(port, isReplica)
 
+	if isReplica {
+		go func() {
+			if err := s.ConnectToMaster(replicaOf); err != nil {
+				logger.Error("error connecting to the master from the replica", "replicaOf", replicaOf, "port", port)
+			}
+		}()
+	}
+
 	err := s.Listen()
 
 	if err != nil {

@@ -6,11 +6,13 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/logger"
+	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 	"github.com/codecrafters-io/redis-starter-go/internal/transactions"
 )
@@ -33,6 +35,31 @@ func NewRedisServer(port int, isReplica bool) *RedisServer {
 		transactions: transactions.NewTransactions(),
 		isReplica:    isReplica,
 	}
+}
+
+func (r *RedisServer) ConnectToMaster(replicaOf string) error {
+	parts := strings.Split(replicaOf, " ")
+	conn, err := net.Dial("tcp", net.JoinHostPort(parts[0], parts[1]))
+
+	if err != nil {
+		return err
+	}
+
+	encoder := resp.NewEncoder(conn)
+
+	pingMsg := &resp.Array{
+		Elements: []resp.Value{
+			&resp.BulkString{
+				Bytes: []byte("PING"),
+			},
+		},
+	}
+
+	if err = encoder.Write(pingMsg); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *RedisServer) Listen() error {
