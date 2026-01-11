@@ -80,7 +80,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s, false)
+		out := testDispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array from XREAD, got %T", out)
@@ -116,7 +116,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s, false)
+		out := testDispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected resp.Array from XREAD, got %T", out)
@@ -151,7 +151,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s, false)
+		out := testDispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array from XREAD, got %T", out)
@@ -174,7 +174,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s, false)
+		out := testDispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array from XREAD, got %T", out)
@@ -195,7 +195,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 				&resp.BulkString{Bytes: []byte("value")},
 			},
 		}
-		out := Dispatch(setCmd, s, false)
+		out := testDispatch(setCmd, s, false)
 		ss, ok := out.(*resp.SimpleString)
 		if !ok || string(ss.Bytes) != "OK" {
 			t.Fatalf("expected SET to return +OK, got %#v", out)
@@ -210,7 +210,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 			},
 		}
 
-		result := Dispatch(cmd, s, false)
+		result := testDispatch(cmd, s, false)
 		errResp, ok := result.(*resp.Error)
 		if !ok {
 			t.Fatalf("expected Error, got %T", result)
@@ -233,7 +233,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 			},
 		}
 
-		result := Dispatch(cmd, s, false)
+		result := testDispatch(cmd, s, false)
 
 		errResp, ok := result.(*resp.Error)
 		if !ok {
@@ -272,7 +272,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s, false)
+		out := testDispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array from XREAD, got %T", out)
@@ -324,7 +324,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s, false)
+		out := testDispatch(cmd, s, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected Array from XREAD, got %T", out)
@@ -364,7 +364,7 @@ func TestDispatchXreadCommand(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, s, false)
+		out := testDispatch(cmd, s, false)
 
 		if arr, ok := out.(*resp.Error); ok {
 			t.Fatalf("unexpected error from XREAD response %#v, expected resp.Array", arr)

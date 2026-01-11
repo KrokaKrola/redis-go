@@ -82,7 +82,7 @@ func TestDispatch_SET_Then_GET_ReturnsValue(t *testing.T) {
 			&resp.BulkString{Bytes: []byte("100")},
 		},
 	}
-	out1 := Dispatch(setCmd, s, false)
+	out1 := testDispatch(setCmd, s, false)
 	if ss, ok := out1.(*resp.SimpleString); !ok || string(ss.Bytes) != "OK" {
 		t.Fatalf("expected +OK for SET, got %#v", out1)
 	}
@@ -94,7 +94,7 @@ func TestDispatch_SET_Then_GET_ReturnsValue(t *testing.T) {
 			&resp.BulkString{Bytes: []byte("mykey")},
 		},
 	}
-	out2 := Dispatch(getCmd, s, false)
+	out2 := testDispatch(getCmd, s, false)
 	bs, ok := out2.(*resp.BulkString)
 	if !ok {
 		t.Fatalf("expected BulkString for GET, got %T", out2)
@@ -125,7 +125,7 @@ func TestDispatch_SET_WithPXExpiry(t *testing.T) {
 		t.Fatalf("Parse returned protocol error: %#v", perr)
 	}
 
-	out := Dispatch(cmd, s, false)
+	out := testDispatch(cmd, s, false)
 	if ss, ok := out.(*resp.SimpleString); !ok || string(ss.Bytes) != "OK" {
 		t.Fatalf("expected +OK for SET with PX, got %#v", out)
 	}
@@ -137,7 +137,7 @@ func TestDispatch_SET_WithPXExpiry(t *testing.T) {
 		},
 	}
 
-	immediate := Dispatch(getCmd, s, false)
+	immediate := testDispatch(getCmd, s, false)
 	bs, ok := immediate.(*resp.BulkString)
 	if !ok || bs.Null {
 		t.Fatalf("expected BulkString for GET before expiry, got %#v", immediate)
@@ -148,7 +148,7 @@ func TestDispatch_SET_WithPXExpiry(t *testing.T) {
 
 	time.Sleep(150 * time.Millisecond)
 
-	expired := Dispatch(getCmd, s, false)
+	expired := testDispatch(getCmd, s, false)
 	if bs, ok := expired.(*resp.BulkString); !ok || !bs.Null {
 		t.Fatalf("expected null BulkString after expiry, got %#v", expired)
 	}
@@ -162,7 +162,7 @@ func TestDispatch_GET_Nonexistent_ReturnsNull(t *testing.T) {
 		Name: GET_COMMAND,
 		Args: []resp.Value{&resp.BulkString{Bytes: []byte("missing")}},
 	}
-	out := Dispatch(getCmd, s, false)
+	out := testDispatch(getCmd, s, false)
 	bs, ok := out.(*resp.BulkString)
 	if !ok {
 		t.Fatalf("expected BulkString, got %T", out)

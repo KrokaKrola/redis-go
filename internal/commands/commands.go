@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 
+	"github.com/codecrafters-io/redis-starter-go/internal/replica"
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 	"github.com/codecrafters-io/redis-starter-go/internal/store"
 )
@@ -90,9 +91,22 @@ type serverConfig struct {
 }
 
 type handlerData struct {
-	cmd    *Command
-	store  *store.Store
-	config *serverConfig
+	cmd              *Command
+	store            *store.Store
+	config           *serverConfig
+	replicasRegistry replica.ReplicasRegistry
+	remoteAddr       string
+}
+
+type ServerContext struct {
+	IsReplica        bool
+	ReplicasRegistry replica.ReplicasRegistry
+	Store            *store.Store
+}
+
+type HandlerContext struct {
+	Cmd        *Command
+	RemoteAddr string
 }
 
 type handlerFn func(handlerData) resp.Value
@@ -116,18 +130,21 @@ var handlers = map[Name]handlerFn{
 	MULTI_COMMAND:   handleMulti,
 	DISCARD_COMMAND: handleDiscard,
 	INFO_COMMAND:    handleInfo,
+	REPLCONF:        handleReplconf,
 }
 
-func Dispatch(cmd *Command, store *store.Store, isReplica bool) resp.Value {
-	if handler, ok := handlers[cmd.Name]; ok {
+func Dispatch(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
+	if handler, ok := handlers[handlerCtx.Cmd.Name]; ok {
 		return handler(handlerData{
-			cmd:   cmd,
-			store: store,
+			cmd:   handlerCtx.Cmd,
+			store: serverCtx.Store,
 			config: &serverConfig{
-				isReplica: isReplica,
+				isReplica: serverCtx.IsReplica,
 			},
+			replicasRegistry: serverCtx.ReplicasRegistry,
+			remoteAddr:       handlerCtx.RemoteAddr,
 		})
 	}
 
-	return &resp.Error{Msg: fmt.Sprintf("ERR handler for %s is not implemented", cmd.Name)}
+	return &resp.Error{Msg: fmt.Sprintf("ERR handler for %s is not implemented", handlerCtx.Cmd.Name)}
 }

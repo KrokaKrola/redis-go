@@ -45,7 +45,7 @@ func TestDispatch_Lpop(t *testing.T) {
 				Args: args,
 			}
 
-			out := Dispatch(cmd, store, false)
+			out := testDispatch(cmd, store, false)
 
 			if isSingleElementRequested {
 				bs, ok := out.(*resp.BulkString)
@@ -93,12 +93,12 @@ func TestDispatch_Lpop_EmptyList(t *testing.T) {
 		},
 	}
 
-	out := Dispatch(cmd, store, false)
+	out := testDispatch(cmd, store, false)
 	if _, ok := out.(*resp.Error); ok {
 		t.Fatalf("unexpected resp.Error, got %T", out)
 	}
 
-	out = Dispatch(cmd, store, false)
+	out = testDispatch(cmd, store, false)
 	bs, ok := out.(*resp.BulkString)
 	if !ok {
 		t.Fatalf("expected resp.BulkString, got %T", out)
@@ -117,7 +117,7 @@ func TestDispatch_Lpop_Key_Doesnt_Exist(t *testing.T) {
 		},
 	}
 
-	out := Dispatch(cmd, store, false)
+	out := testDispatch(cmd, store, false)
 	bs, ok := out.(*resp.BulkString)
 	if !ok {
 		t.Fatalf("expected resp.BulkString, got %T", out)
@@ -139,7 +139,7 @@ func TestDispatch_Lpop_Key_Wrong_Type(t *testing.T) {
 		},
 	}
 
-	out := Dispatch(cmd, store, false)
+	out := testDispatch(cmd, store, false)
 	if _, ok := out.(*resp.Error); ok {
 		t.Fatalf("unexpected resp.Error, got %T", out)
 	}
@@ -151,7 +151,7 @@ func TestDispatch_Lpop_Key_Wrong_Type(t *testing.T) {
 		},
 	}
 
-	out = Dispatch(cmd, store, false)
+	out = testDispatch(cmd, store, false)
 	if _, ok := out.(*resp.Error); !ok {
 		t.Fatalf("expected resp.Error, got %T", out)
 	}
@@ -179,7 +179,7 @@ func TestDispatch_Lpop_InvalidCount(t *testing.T) {
 				},
 			}
 
-			out := Dispatch(cmd, store, false)
+			out := testDispatch(cmd, store, false)
 
 			respErr, ok := out.(*resp.Error)
 			if !ok {
@@ -205,7 +205,7 @@ func TestDispatch_Lpop_CountGreaterThanOneEmptyResult(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, store, false)
+		out := testDispatch(cmd, store, false)
 		if _, ok := out.(*resp.BulkString); !ok {
 			t.Fatalf("expected resp.BulkString when popping existing value, got %T", out)
 		}
@@ -218,7 +218,7 @@ func TestDispatch_Lpop_CountGreaterThanOneEmptyResult(t *testing.T) {
 			},
 		}
 
-		out = Dispatch(cmd, store, false)
+		out = testDispatch(cmd, store, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected resp.Array for count > 1, got %T", out)
@@ -243,7 +243,7 @@ func TestDispatch_Lpop_CountGreaterThanOneEmptyResult(t *testing.T) {
 			},
 		}
 
-		out := Dispatch(cmd, store, false)
+		out := testDispatch(cmd, store, false)
 		arr, ok := out.(*resp.Array)
 		if !ok {
 			t.Fatalf("expected resp.Array for missing key, got %T", out)

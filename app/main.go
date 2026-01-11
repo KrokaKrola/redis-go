@@ -32,7 +32,7 @@ func main() {
 
 	if isReplica {
 		go func() {
-			if err := s.ConnectToMaster(replicaOf); err != nil {
+			if err := s.ConnectToMaster(replicaOf, port); err != nil {
 				logger.Error("error connecting to the master from the replica", "replicaOf", replicaOf, "port", port)
 			}
 		}()

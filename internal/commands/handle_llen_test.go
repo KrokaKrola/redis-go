@@ -21,7 +21,7 @@ func TestDispatch_Llen(t *testing.T) {
 
 	store := store.NewStore()
 
-	Dispatch(cmd, store, false)
+	testDispatch(cmd, store, false)
 
 	cmd = &Command{
 		Name: LLEN_COMMAND,
@@ -30,7 +30,7 @@ func TestDispatch_Llen(t *testing.T) {
 		},
 	}
 
-	out := Dispatch(cmd, store, false)
+	out := testDispatch(cmd, store, false)
 	in, ok := out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -52,7 +52,7 @@ func TestDispatch_Llen_Missing_Key(t *testing.T) {
 		},
 	}
 
-	out := Dispatch(cmd, store, false)
+	out := testDispatch(cmd, store, false)
 	in, ok := out.(*resp.Integer)
 	if !ok {
 		t.Fatalf("expected Integer, got %T", out)
@@ -75,7 +75,7 @@ func TestDispatch_Llen_Type_Missmatch(t *testing.T) {
 
 	store := store.NewStore()
 
-	Dispatch(cmd, store, false)
+	testDispatch(cmd, store, false)
 
 	cmd = &Command{
 		Name: LLEN_COMMAND,
@@ -84,7 +84,7 @@ func TestDispatch_Llen_Type_Missmatch(t *testing.T) {
 		},
 	}
 
-	out := Dispatch(cmd, store, false)
+	out := testDispatch(cmd, store, false)
 	_, ok := out.(*resp.Error)
 	if !ok {
 		t.Fatalf("expected RespError, got %T", out)

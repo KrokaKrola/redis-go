@@ -17,20 +17,21 @@ import (
 )
 
 type Session struct {
-	conn         net.Conn
-	store        *store.Store
-	transactions *transactions.Transactions
-	id           string
-	decoder      *resp.Decoder
-	encoder      *resp.Encoder
-	writer       *bufio.Writer
-	reader       *bufio.Reader
-	isReplica    bool
+	conn             net.Conn
+	store            *store.Store
+	transactions     *transactions.Transactions
+	id               string
+	decoder          *resp.Decoder
+	encoder          *resp.Encoder
+	writer           *bufio.Writer
+	reader           *bufio.Reader
+	isReplica        bool
+	replicasRegistry *ReplicasRegistry
 }
 
 var nextClientId int64
 
-func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Transactions, isReplica bool) *Session {
+func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Transactions, isReplica bool, replicasRegistry *ReplicasRegistry) *Session {
 	id := fmt.Sprintf("%d-%s", atomic.AddInt64(&nextClientId, 1), conn.RemoteAddr().String())
 
 	reader := bufio.NewReader(conn)
@@ -39,16 +40,21 @@ func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Tr
 	encoder := resp.NewEncoder(writer)
 
 	return &Session{
-		conn:         conn,
-		store:        store,
-		transactions: transactions,
-		id:           id,
-		decoder:      decoder,
-		encoder:      encoder,
-		writer:       writer,
-		reader:       reader,
-		isReplica:    isReplica,
+		conn:             conn,
+		store:            store,
+		transactions:     transactions,
+		id:               id,
+		decoder:          decoder,
+		encoder:          encoder,
+		writer:           writer,
+		reader:           reader,
+		isReplica:        isReplica,
+		replicasRegistry: replicasRegistry,
 	}
+}
+
+func (s *Session) getRemoteAddr() string {
+	return s.conn.RemoteAddr().String()
 }
 
 func (s *Session) handleDecoderError(err error) (stop bool) {
@@ -128,12 +134,32 @@ func (s *Session) executeCommand(cmd *commands.Command) resp.Value {
 		return &resp.SimpleString{Bytes: []byte("QUEUED")}
 	}
 
-	return commands.Dispatch(cmd, s.store, s.isReplica)
+	serverContext := &commands.ServerContext{
+		IsReplica:        s.isReplica,
+		ReplicasRegistry: s.replicasRegistry,
+		Store:            s.store,
+	}
+	handlerContext := &commands.HandlerContext{
+		Cmd:        cmd,
+		RemoteAddr: s.getRemoteAddr(),
+	}
+
+	return commands.Dispatch(serverContext, handlerContext)
 }
 
 func (s *Session) handleMulti(cmd *commands.Command) resp.Value {
 	if !s.transactions.IsActive(s.id) {
-		out := commands.Dispatch(cmd, s.store, s.isReplica)
+		serverContext := &commands.ServerContext{
+			IsReplica:        s.isReplica,
+			ReplicasRegistry: s.replicasRegistry,
+			Store:            s.store,
+		}
+		handlerContext := &commands.HandlerContext{
+			Cmd:        cmd,
+			RemoteAddr: s.getRemoteAddr(),
+		}
+
+		out := commands.Dispatch(serverContext, handlerContext)
 
 		switch out.(type) {
 		case *resp.Error:
@@ -153,7 +179,16 @@ func (s *Session) handleExec() resp.Value {
 	}
 
 	return s.transactions.ExecuteAndDiscard(s.id, func(c *commands.Command) resp.Value {
-		return commands.Dispatch(c, s.store, s.isReplica)
+		serverContext := &commands.ServerContext{
+			IsReplica:        s.isReplica,
+			ReplicasRegistry: s.replicasRegistry,
+			Store:            s.store,
+		}
+		handlerContext := &commands.HandlerContext{
+			Cmd:        c,
+			RemoteAddr: s.getRemoteAddr(),
+		}
+		return commands.Dispatch(serverContext, handlerContext)
 	})
 }
 
@@ -164,5 +199,15 @@ func (s *Session) handleDiscard(cmd *commands.Command) resp.Value {
 
 	s.transactions.Discard(s.id)
 
-	return commands.Dispatch(cmd, s.store, s.isReplica)
+	serverContext := &commands.ServerContext{
+		IsReplica:        s.isReplica,
+		ReplicasRegistry: s.replicasRegistry,
+		Store:            s.store,
+	}
+	handlerContext := &commands.HandlerContext{
+		Cmd:        cmd,
+		RemoteAddr: s.getRemoteAddr(),
+	}
+
+	return commands.Dispatch(serverContext, handlerContext)
 }

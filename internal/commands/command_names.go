@@ -24,6 +24,7 @@ const (
 	EXEC_COMMAND    Name = "EXEC"
 	DISCARD_COMMAND Name = "DISCARD"
 	INFO_COMMAND    Name = "INFO"
+	REPLCONF        Name = "REPLCONF"
 )
 
 var commandByName = map[string]Name{
@@ -46,6 +47,7 @@ var commandByName = map[string]Name{
 	string(EXEC_COMMAND):    EXEC_COMMAND,
 	string(DISCARD_COMMAND): DISCARD_COMMAND,
 	string(INFO_COMMAND):    INFO_COMMAND,
+	string(REPLCONF):        REPLCONF,
 }
 
 func getCommandName(name []byte) Name {
