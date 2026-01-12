@@ -1,10 +1,8 @@
 package replica
 
 type Replica struct {
-	Port          int
-	Capabilities  []string
-	ReplicationId string
-	Offset        int
+	Port         int
+	Capabilities []string
 }
 
 type ReplicasRegistry interface {

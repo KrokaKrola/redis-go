@@ -6,13 +6,13 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 )
 
-func handlePsync(data handlerData) resp.Value {
-	_, ok := data.replicasRegistry.GetReplica(data.remoteAddr)
+func handlePsync(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
+	_, ok := serverCtx.ReplicasRegistry.GetReplica(handlerCtx.RemoteAddr)
 	if !ok {
 		return &resp.Error{Msg: "ERR replica handshake failed"}
 	}
 
-	replId := data.replicationId
+	replId := serverCtx.ReplicationId
 	offset := 0
 
 	return &resp.SimpleString{

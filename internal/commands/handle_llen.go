@@ -4,17 +4,17 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 )
 
-func handleLlen(data handlerData) resp.Value {
-	if data.cmd.ArgsLen() != 1 {
+func handleLlen(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
+	if handlerCtx.Cmd.ArgsLen() != 1 {
 		return &resp.Error{Msg: "ERR wrong number of arguments for LLEN command"}
 	}
 
-	key, ok := data.cmd.ArgString(0)
+	key, ok := handlerCtx.Cmd.ArgString(0)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid key value for LLEN command"}
 	}
 
-	v, ok := data.store.Lrange(key, 0, -1)
+	v, ok := serverCtx.Store.Lrange(key, 0, -1)
 	if !ok {
 		return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
 	}

@@ -6,14 +6,14 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 )
 
-func handleXread(data handlerData) resp.Value {
-	argsLen := data.cmd.ArgsLen()
+func handleXread(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
+	argsLen := handlerCtx.Cmd.ArgsLen()
 
 	if argsLen < 1 {
 		return &resp.Error{Msg: "ERR invalid number of arguments for XREAD command"}
 	}
 
-	cmdIdentifier, ok := data.cmd.ArgString(0)
+	cmdIdentifier, ok := handlerCtx.Cmd.ArgString(0)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid identifier for XREAD command"}
 	}
@@ -29,13 +29,13 @@ func handleXread(data handlerData) resp.Value {
 	blockingTimeoutMs := 0
 
 	if isBlocking {
-		blockingTimeoutMs, ok = data.cmd.ArgInt(1)
+		blockingTimeoutMs, ok = handlerCtx.Cmd.ArgInt(1)
 
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid BLOCK timeout value for XREAD command"}
 		}
 
-		streamsKeyword, ok := data.cmd.ArgString(2)
+		streamsKeyword, ok := handlerCtx.Cmd.ArgString(2)
 		if !ok || !strings.EqualFold(streamsKeyword, "streams") {
 			return &resp.Error{Msg: "ERR invalid STREAMS identifier for XREAD command"}
 		}
@@ -60,12 +60,12 @@ func handleXread(data handlerData) resp.Value {
 	}
 
 	for i := range pairsCount {
-		storeKey, ok := data.cmd.ArgString(i + streamsKeyIdsOffset)
+		storeKey, ok := handlerCtx.Cmd.ArgString(i + streamsKeyIdsOffset)
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid stream name value for XREAD command"}
 		}
 
-		streamId, ok := data.cmd.ArgString(i + pairsCount + streamsKeyIdsOffset)
+		streamId, ok := handlerCtx.Cmd.ArgString(i + pairsCount + streamsKeyIdsOffset)
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid stream id value for XREAD command"}
 		}
@@ -73,7 +73,7 @@ func handleXread(data handlerData) resp.Value {
 		streamKeyIdPairs = append(streamKeyIdPairs, []string{storeKey, streamId})
 	}
 
-	streams, err := data.store.Xread(streamKeyIdPairs, blockingTimeoutMs, isBlocking)
+	streams, err := serverCtx.Store.Xread(streamKeyIdPairs, blockingTimeoutMs, isBlocking)
 	if err != nil {
 		return &resp.Error{Msg: err.Error()}
 	}

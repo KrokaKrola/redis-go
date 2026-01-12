@@ -2,18 +2,18 @@ package commands
 
 import "github.com/codecrafters-io/redis-starter-go/internal/resp"
 
-func handleReplconf(data handlerData) resp.Value {
-	if data.config.isReplica {
+func handleReplconf(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
+	if serverCtx.IsReplica {
 		return &resp.Error{Msg: "ERR attempt to REPLCONF on replica server"}
 	}
 
-	args := data.cmd.ArgsLen()
+	args := handlerCtx.Cmd.ArgsLen()
 
 	if args <= 1 {
 		return &resp.Error{Msg: "ERR invalid number of arguments for REPLCONF command"}
 	}
 
-	typeLiteral, ok := data.cmd.ArgString(0)
+	typeLiteral, ok := handlerCtx.Cmd.ArgString(0)
 
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid command structure for REPLCONF command"}
@@ -21,19 +21,19 @@ func handleReplconf(data handlerData) resp.Value {
 
 	switch typeLiteral {
 	case "listening-port":
-		port, ok := data.cmd.ArgInt(1)
+		port, ok := handlerCtx.Cmd.ArgInt(1)
 
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid port value"}
 		}
 
-		if err := data.replicasRegistry.AddReplica(data.remoteAddr, port); err != nil {
+		if err := serverCtx.ReplicasRegistry.AddReplica(handlerCtx.RemoteAddr, port); err != nil {
 			return &resp.Error{Msg: err.Error()}
 		}
 	case "capa":
-		capasList := make([]string, 0, data.cmd.ArgsLen()-1)
-		for i := 1; i < data.cmd.ArgsLen(); i++ {
-			capa, ok := data.cmd.ArgString(i)
+		capasList := make([]string, 0, handlerCtx.Cmd.ArgsLen()-1)
+		for i := 1; i < handlerCtx.Cmd.ArgsLen(); i++ {
+			capa, ok := handlerCtx.Cmd.ArgString(i)
 			if ok {
 				capasList = append(capasList, capa)
 			} else {
@@ -41,7 +41,7 @@ func handleReplconf(data handlerData) resp.Value {
 			}
 		}
 
-		if err := data.replicasRegistry.AddCapabilities(data.remoteAddr, capasList); err != nil {
+		if err := serverCtx.ReplicasRegistry.AddCapabilities(handlerCtx.RemoteAddr, capasList); err != nil {
 			return &resp.Error{Msg: err.Error()}
 		}
 	default:

@@ -86,19 +86,6 @@ func newCommandFromRespArray(arr *resp.Array) (*Command, error) {
 
 }
 
-type serverConfig struct {
-	isReplica bool
-}
-
-type handlerData struct {
-	cmd              *Command
-	store            *store.Store
-	config           *serverConfig
-	replicasRegistry replica.ReplicasRegistry
-	remoteAddr       string
-	replicationId    string
-}
-
 type ServerContext struct {
 	IsReplica        bool
 	ReplicasRegistry replica.ReplicasRegistry
@@ -111,7 +98,7 @@ type HandlerContext struct {
 	RemoteAddr string
 }
 
-type handlerFn func(handlerData) resp.Value
+type handlerFn func(*ServerContext, *HandlerContext) resp.Value
 
 var handlers = map[Name]handlerFn{
 	PING_COMMAND:    handlePing,
@@ -138,17 +125,7 @@ var handlers = map[Name]handlerFn{
 
 func Dispatch(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
 	if handler, ok := handlers[handlerCtx.Cmd.Name]; ok {
-		// TODO: replace handler data with serverCtx and handlerCtx for all handlers
-		return handler(handlerData{
-			cmd:   handlerCtx.Cmd,
-			store: serverCtx.Store,
-			config: &serverConfig{
-				isReplica: serverCtx.IsReplica,
-			},
-			replicasRegistry: serverCtx.ReplicasRegistry,
-			remoteAddr:       handlerCtx.RemoteAddr,
-			replicationId:    serverCtx.ReplicationId,
-		})
+		return handler(serverCtx, handlerCtx)
 	}
 
 	return &resp.Error{Msg: fmt.Sprintf("ERR handler for %s is not implemented", handlerCtx.Cmd.Name)}

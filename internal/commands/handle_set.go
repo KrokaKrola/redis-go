@@ -5,18 +5,18 @@ import (
 	internalStore "github.com/codecrafters-io/redis-starter-go/internal/store"
 )
 
-func handleSet(data handlerData) resp.Value {
-	argsLen := data.cmd.ArgsLen()
+func handleSet(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
+	argsLen := handlerCtx.Cmd.ArgsLen()
 	if argsLen < 2 || argsLen > 4 {
 		return &resp.Error{Msg: "ERR wrong number of arguments for SET command"}
 	}
 
-	key, ok := data.cmd.ArgString(0)
+	key, ok := handlerCtx.Cmd.ArgString(0)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid key value for SET command"}
 	}
 
-	value, ok := data.cmd.ArgBytes(1)
+	value, ok := handlerCtx.Cmd.ArgBytes(1)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid value for SET command"}
 	}
@@ -24,8 +24,8 @@ func handleSet(data handlerData) resp.Value {
 	var expiryType internalStore.ExpiryType
 	var expTime int
 
-	if argsLen > 2 && data.cmd.Args[2] != nil {
-		expValue, ok := data.cmd.ArgString(2)
+	if argsLen > 2 && handlerCtx.Cmd.Args[2] != nil {
+		expValue, ok := handlerCtx.Cmd.ArgString(2)
 
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid EXP value"}
@@ -38,8 +38,8 @@ func handleSet(data handlerData) resp.Value {
 		}
 	}
 
-	if argsLen > 3 && data.cmd.Args[3] != nil {
-		expTime, ok = data.cmd.ArgInt(3)
+	if argsLen > 3 && handlerCtx.Cmd.Args[3] != nil {
+		expTime, ok = handlerCtx.Cmd.ArgInt(3)
 
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid expTime for SET command"}
@@ -54,7 +54,7 @@ func handleSet(data handlerData) resp.Value {
 		return &resp.Error{Msg: "ERR invalid expTime for SET command"}
 	}
 
-	if ok := data.store.Set(key, value, expiryType, expTime); !ok {
+	if ok := serverCtx.Store.Set(key, value, expiryType, expTime); !ok {
 		return &resp.Error{Msg: "ERR during executing store SET command"}
 	}
 

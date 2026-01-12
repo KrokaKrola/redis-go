@@ -17,17 +17,14 @@ import (
 )
 
 type Session struct {
-	conn             net.Conn
-	store            *store.Store
-	transactions     *transactions.Transactions
-	id               string
-	decoder          *resp.Decoder
-	encoder          *resp.Encoder
-	writer           *bufio.Writer
-	reader           *bufio.Reader
-	isReplica        bool
-	replicasRegistry *ReplicasRegistry
-	replicationId    string
+	conn          net.Conn
+	transactions  *transactions.Transactions
+	id            string
+	decoder       *resp.Decoder
+	encoder       *resp.Encoder
+	writer        *bufio.Writer
+	reader        *bufio.Reader
+	serverContext *commands.ServerContext
 }
 
 var nextClientId int64
@@ -41,17 +38,19 @@ func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Tr
 	encoder := resp.NewEncoder(writer)
 
 	return &Session{
-		conn:             conn,
-		store:            store,
-		transactions:     transactions,
-		id:               id,
-		decoder:          decoder,
-		encoder:          encoder,
-		writer:           writer,
-		reader:           reader,
-		isReplica:        isReplica,
-		replicasRegistry: replicasRegistry,
-		replicationId:    replicationId,
+		conn:         conn,
+		transactions: transactions,
+		id:           id,
+		decoder:      decoder,
+		encoder:      encoder,
+		writer:       writer,
+		reader:       reader,
+		serverContext: &commands.ServerContext{
+			IsReplica:        isReplica,
+			ReplicasRegistry: replicasRegistry,
+			Store:            store,
+			ReplicationId:    replicationId,
+		},
 	}
 }
 
@@ -136,34 +135,22 @@ func (s *Session) executeCommand(cmd *commands.Command) resp.Value {
 		return &resp.SimpleString{Bytes: []byte("QUEUED")}
 	}
 
-	serverContext := &commands.ServerContext{
-		IsReplica:        s.isReplica,
-		ReplicasRegistry: s.replicasRegistry,
-		Store:            s.store,
-		ReplicationId:    s.replicationId,
-	}
 	handlerContext := &commands.HandlerContext{
 		Cmd:        cmd,
 		RemoteAddr: s.getRemoteAddr(),
 	}
 
-	return commands.Dispatch(serverContext, handlerContext)
+	return commands.Dispatch(s.serverContext, handlerContext)
 }
 
 func (s *Session) handleMulti(cmd *commands.Command) resp.Value {
 	if !s.transactions.IsActive(s.id) {
-		serverContext := &commands.ServerContext{
-			IsReplica:        s.isReplica,
-			ReplicasRegistry: s.replicasRegistry,
-			Store:            s.store,
-			ReplicationId:    s.replicationId,
-		}
 		handlerContext := &commands.HandlerContext{
 			Cmd:        cmd,
 			RemoteAddr: s.getRemoteAddr(),
 		}
 
-		out := commands.Dispatch(serverContext, handlerContext)
+		out := commands.Dispatch(s.serverContext, handlerContext)
 
 		switch out.(type) {
 		case *resp.Error:
@@ -183,17 +170,11 @@ func (s *Session) handleExec() resp.Value {
 	}
 
 	return s.transactions.ExecuteAndDiscard(s.id, func(c *commands.Command) resp.Value {
-		serverContext := &commands.ServerContext{
-			IsReplica:        s.isReplica,
-			ReplicasRegistry: s.replicasRegistry,
-			Store:            s.store,
-			ReplicationId:    s.replicationId,
-		}
 		handlerContext := &commands.HandlerContext{
 			Cmd:        c,
 			RemoteAddr: s.getRemoteAddr(),
 		}
-		return commands.Dispatch(serverContext, handlerContext)
+		return commands.Dispatch(s.serverContext, handlerContext)
 	})
 }
 
@@ -204,16 +185,10 @@ func (s *Session) handleDiscard(cmd *commands.Command) resp.Value {
 
 	s.transactions.Discard(s.id)
 
-	serverContext := &commands.ServerContext{
-		IsReplica:        s.isReplica,
-		ReplicasRegistry: s.replicasRegistry,
-		Store:            s.store,
-		ReplicationId:    s.replicationId,
-	}
 	handlerContext := &commands.HandlerContext{
 		Cmd:        cmd,
 		RemoteAddr: s.getRemoteAddr(),
 	}
 
-	return commands.Dispatch(serverContext, handlerContext)
+	return commands.Dispatch(s.serverContext, handlerContext)
 }

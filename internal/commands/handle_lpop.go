@@ -4,13 +4,13 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 )
 
-func handleLpop(data handlerData) resp.Value {
-	argsLen := data.cmd.ArgsLen()
+func handleLpop(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
+	argsLen := handlerCtx.Cmd.ArgsLen()
 	if argsLen == 0 || argsLen > 2 {
 		return &resp.Error{Msg: "ERR wrong number of arguments for LPOP command"}
 	}
 
-	key, ok := data.cmd.ArgString(0)
+	key, ok := handlerCtx.Cmd.ArgString(0)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid key value for LPOP command"}
 	}
@@ -18,7 +18,7 @@ func handleLpop(data handlerData) resp.Value {
 	count := 1
 
 	if argsLen == 2 {
-		count, ok = data.cmd.ArgInt(1)
+		count, ok = handlerCtx.Cmd.ArgInt(1)
 
 		if !ok {
 			return &resp.Error{Msg: "ERR invalid count value for LPOP command"}
@@ -29,7 +29,7 @@ func handleLpop(data handlerData) resp.Value {
 		}
 	}
 
-	v, ok := data.store.Lpop(key, count)
+	v, ok := serverCtx.Store.Lpop(key, count)
 	if !ok {
 		return &resp.Error{Msg: "WRONGTYPE Operation against a key holding the wrong kind of value"}
 	}

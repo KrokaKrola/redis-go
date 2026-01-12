@@ -7,8 +7,8 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 )
 
-func handleInfo(data handlerData) resp.Value {
-	section, ok := data.cmd.ArgString(0)
+func handleInfo(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
+	section, ok := handlerCtx.Cmd.ArgString(0)
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid section value"}
 	}
@@ -18,7 +18,7 @@ func handleInfo(data handlerData) resp.Value {
 	if strings.EqualFold(section, "replication") {
 		role := "master"
 
-		if data.config.isReplica {
+		if serverCtx.IsReplica {
 			role = "slave"
 		}
 
@@ -26,7 +26,7 @@ func handleInfo(data handlerData) resp.Value {
 		response += "role:" + role + "r\n"
 
 		// master_replid key-value pair
-		response += fmt.Sprintf("master_replid:%s\r\n", data.replicationId)
+		response += fmt.Sprintf("master_replid:%s\r\n", serverCtx.ReplicationId)
 
 		// master_repl_offset key-value pair
 		response += fmt.Sprintf("master_repl_offset:%d", 0)
