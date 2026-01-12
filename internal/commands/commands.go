@@ -96,12 +96,14 @@ type handlerData struct {
 	config           *serverConfig
 	replicasRegistry replica.ReplicasRegistry
 	remoteAddr       string
+	replicationId    string
 }
 
 type ServerContext struct {
 	IsReplica        bool
 	ReplicasRegistry replica.ReplicasRegistry
 	Store            *store.Store
+	ReplicationId    string
 }
 
 type HandlerContext struct {
@@ -145,6 +147,7 @@ func Dispatch(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
 			},
 			replicasRegistry: serverCtx.ReplicasRegistry,
 			remoteAddr:       handlerCtx.RemoteAddr,
+			replicationId:    serverCtx.ReplicationId,
 		})
 	}
 

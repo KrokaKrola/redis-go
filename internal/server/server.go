@@ -30,15 +30,23 @@ type RedisServer struct {
 	wg               sync.WaitGroup // tracks active connections
 	isReplica        bool
 	replicasRegistry *ReplicasRegistry
+	replicationId    string
 }
 
 func NewRedisServer(port int, isReplica bool) *RedisServer {
+	replicationId := ""
+
+	if !isReplica {
+		replicationId = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
+	}
+
 	return &RedisServer{
 		port:             port,
 		store:            store.NewStore(),
 		transactions:     transactions.NewTransactions(),
 		isReplica:        isReplica,
 		replicasRegistry: NewReplicasRegistry(),
+		replicationId:    replicationId,
 	}
 }
 
@@ -213,6 +221,6 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	session := NewSession(conn, r.store, r.transactions, r.isReplica, r.replicasRegistry)
+	session := NewSession(conn, r.store, r.transactions, r.isReplica, r.replicasRegistry, r.replicationId)
 	session.Run()
 }

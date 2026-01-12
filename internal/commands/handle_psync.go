@@ -7,11 +7,12 @@ import (
 )
 
 func handlePsync(data handlerData) resp.Value {
-	if _, ok := data.replicasRegistry.GetReplica(data.remoteAddr); !ok {
+	_, ok := data.replicasRegistry.GetReplica(data.remoteAddr)
+	if !ok {
 		return &resp.Error{Msg: "ERR replica handshake failed"}
 	}
 
-	replId := "<REPL_ID>"
+	replId := data.replicationId
 	offset := 0
 
 	return &resp.SimpleString{

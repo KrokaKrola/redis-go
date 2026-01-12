@@ -27,11 +27,12 @@ type Session struct {
 	reader           *bufio.Reader
 	isReplica        bool
 	replicasRegistry *ReplicasRegistry
+	replicationId    string
 }
 
 var nextClientId int64
 
-func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Transactions, isReplica bool, replicasRegistry *ReplicasRegistry) *Session {
+func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Transactions, isReplica bool, replicasRegistry *ReplicasRegistry, replicationId string) *Session {
 	id := fmt.Sprintf("%d-%s", atomic.AddInt64(&nextClientId, 1), conn.RemoteAddr().String())
 
 	reader := bufio.NewReader(conn)
@@ -50,6 +51,7 @@ func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Tr
 		reader:           reader,
 		isReplica:        isReplica,
 		replicasRegistry: replicasRegistry,
+		replicationId:    replicationId,
 	}
 }
 
@@ -138,6 +140,7 @@ func (s *Session) executeCommand(cmd *commands.Command) resp.Value {
 		IsReplica:        s.isReplica,
 		ReplicasRegistry: s.replicasRegistry,
 		Store:            s.store,
+		ReplicationId:    s.replicationId,
 	}
 	handlerContext := &commands.HandlerContext{
 		Cmd:        cmd,
@@ -153,6 +156,7 @@ func (s *Session) handleMulti(cmd *commands.Command) resp.Value {
 			IsReplica:        s.isReplica,
 			ReplicasRegistry: s.replicasRegistry,
 			Store:            s.store,
+			ReplicationId:    s.replicationId,
 		}
 		handlerContext := &commands.HandlerContext{
 			Cmd:        cmd,
@@ -183,6 +187,7 @@ func (s *Session) handleExec() resp.Value {
 			IsReplica:        s.isReplica,
 			ReplicasRegistry: s.replicasRegistry,
 			Store:            s.store,
+			ReplicationId:    s.replicationId,
 		}
 		handlerContext := &commands.HandlerContext{
 			Cmd:        c,
@@ -203,6 +208,7 @@ func (s *Session) handleDiscard(cmd *commands.Command) resp.Value {
 		IsReplica:        s.isReplica,
 		ReplicasRegistry: s.replicasRegistry,
 		Store:            s.store,
+		ReplicationId:    s.replicationId,
 	}
 	handlerContext := &commands.HandlerContext{
 		Cmd:        cmd,

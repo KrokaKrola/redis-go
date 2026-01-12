@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
@@ -25,10 +26,10 @@ func handleInfo(data handlerData) resp.Value {
 		response += "role:" + role + "r\n"
 
 		// master_replid key-value pair
-		response += "master_replid:8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb\r\n"
+		response += fmt.Sprintf("master_replid:%s\r\n", data.replicationId)
 
 		// master_repl_offset key-value pair
-		response += "master_repl_offset:0"
+		response += fmt.Sprintf("master_repl_offset:%d", 0)
 
 		return &resp.BulkString{
 			Bytes: []byte(response),
