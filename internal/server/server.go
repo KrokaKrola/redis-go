@@ -2,11 +2,13 @@ package server
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"sync"
 	"syscall"
@@ -45,7 +47,7 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 	conn, err := net.Dial("tcp", net.JoinHostPort(parts[0], parts[1]))
 
 	if err != nil {
-		return err
+		return errors.Join(errors.New("error while trying to connect to the master server"), err)
 	}
 
 	encoder := resp.NewEncoder(conn)
@@ -63,8 +65,13 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		return errors.Join(fmt.Errorf("error sending PING request to master %s from replica", replicaOf), err)
 	}
 
-	if _, err := decoder.Read(); err != nil {
+	pingResponse, err := decoder.Read()
+	if err != nil {
 		return errors.Join(fmt.Errorf("error reading PING response from replica %s", replicaOf), err)
+	}
+
+	if _, ok := pingResponse.(*resp.Error); ok {
+		return fmt.Errorf("invalid PING response from replica %s", replicaOf)
 	}
 
 	replConfMsg := &resp.Array{
@@ -79,8 +86,13 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		return errors.Join(fmt.Errorf("error sending REPLCONF listening-port request to master %s from replica", replicaOf), err)
 	}
 
-	if _, err := decoder.Read(); err != nil {
-		return errors.Join(fmt.Errorf("error reading REPLCONF listenin-port response from replica %s", replicaOf), err)
+	replConfListeningPortResponse, err := decoder.Read()
+	if err != nil {
+		return errors.Join(fmt.Errorf("error reading REPLCONF listening-port response from replica %s", replicaOf), err)
+	}
+
+	if _, ok := replConfListeningPortResponse.(*resp.Error); ok {
+		return fmt.Errorf("invalid REPLCONF listening-port response from replica %s", replicaOf)
 	}
 
 	replConfMsg = &resp.Array{
@@ -95,8 +107,41 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		return errors.Join(fmt.Errorf("error sending REPLCONF capa request to master %s from replica", replicaOf), err)
 	}
 
-	if _, err := decoder.Read(); err != nil {
+	replConfCapaResponse, err := decoder.Read()
+	if err != nil {
 		return errors.Join(fmt.Errorf("error reading REPLCONF capa response from replica %s", replicaOf), err)
+	}
+
+	if _, ok := replConfCapaResponse.(*resp.Error); ok {
+		return fmt.Errorf("invalid REPLCONF capa response from replica %s", replicaOf)
+	}
+
+	psyncInitialMsg := &resp.Array{
+		Elements: []resp.Value{
+			&resp.BulkString{Bytes: []byte("PSYNC")},
+			&resp.BulkString{Bytes: []byte("?")},
+			&resp.BulkString{Bytes: []byte("-1")},
+		},
+	}
+
+	if err = encoder.Write(psyncInitialMsg); err != nil {
+		return errors.Join(fmt.Errorf("error sending PSYNC to master %s from replica", replicaOf), err)
+	}
+
+	psyncResponse, err := decoder.Read()
+	if err != nil {
+		return errors.Join(fmt.Errorf("error reading PSYNC response from replica %s", replicaOf), err)
+	}
+
+	ss, ok := psyncResponse.(*resp.SimpleString)
+	if !ok {
+		return fmt.Errorf("ERR invalid response from master")
+	}
+
+	psyncParts := bytes.Split(ss.Bytes, []byte(" "))
+
+	if len(psyncParts) < 3 || !slices.Equal(psyncParts[0], []byte("FULLRESYNC")) {
+		return fmt.Errorf("ERR invalid response from master. Expected PSYNC response to contain at least 3 elements and FULLRESYNC")
 	}
 
 	return nil

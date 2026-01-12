@@ -31,7 +31,7 @@ func handleReplconf(data handlerData) resp.Value {
 			return &resp.Error{Msg: err.Error()}
 		}
 	case "capa":
-		capasList := []string{}
+		capasList := make([]string, 0, data.cmd.ArgsLen()-1)
 		for i := 1; i < data.cmd.ArgsLen(); i++ {
 			capa, ok := data.cmd.ArgString(i)
 			if ok {
@@ -44,6 +44,8 @@ func handleReplconf(data handlerData) resp.Value {
 		if err := data.replicasRegistry.AddCapabilities(data.remoteAddr, capasList); err != nil {
 			return &resp.Error{Msg: err.Error()}
 		}
+	default:
+		return &resp.Error{Msg: "ERR unknown REPLCONF command type"}
 	}
 
 	return &resp.SimpleString{Bytes: []byte("OK")}

@@ -33,7 +33,7 @@ func main() {
 	if isReplica {
 		go func() {
 			if err := s.ConnectToMaster(replicaOf, port); err != nil {
-				logger.Error("error connecting to the master from the replica", "replicaOf", replicaOf, "port", port)
+				logger.Error(err.Error(), "replicaOf", replicaOf, "port", port)
 			}
 		}()
 	}

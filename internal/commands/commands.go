@@ -131,10 +131,12 @@ var handlers = map[Name]handlerFn{
 	DISCARD_COMMAND: handleDiscard,
 	INFO_COMMAND:    handleInfo,
 	REPLCONF:        handleReplconf,
+	PSYNC:           handlePsync,
 }
 
 func Dispatch(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
 	if handler, ok := handlers[handlerCtx.Cmd.Name]; ok {
+		// TODO: replace handler data with serverCtx and handlerCtx for all handlers
 		return handler(handlerData{
 			cmd:   handlerCtx.Cmd,
 			store: serverCtx.Store,
