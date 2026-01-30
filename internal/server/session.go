@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -16,15 +17,18 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/internal/transactions"
 )
 
+//go:embed empty.rdb
+var emptyRDB []byte
+
 type Session struct {
-	conn          net.Conn
-	transactions  *transactions.Transactions
-	id            string
-	decoder       *resp.Decoder
-	encoder       *resp.Encoder
-	writer        *bufio.Writer
-	reader        *bufio.Reader
-	serverContext *commands.ServerContext
+	conn         net.Conn
+	transactions *transactions.Transactions
+	id           string
+	decoder      *resp.Decoder
+	encoder      *resp.Encoder
+	writer       *bufio.Writer
+	reader       *bufio.Reader
+	serverCtx    *commands.ServerContext
 }
 
 var nextClientId int64
@@ -45,7 +49,7 @@ func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Tr
 		encoder:      encoder,
 		writer:       writer,
 		reader:       reader,
-		serverContext: &commands.ServerContext{
+		serverCtx: &commands.ServerContext{
 			IsReplica:        isReplica,
 			ReplicasRegistry: replicasRegistry,
 			Store:            store,
@@ -105,6 +109,12 @@ func (s *Session) Run() {
 
 		out := s.executeCommand(cmd)
 
+		// no-op case, continue
+		if out == nil {
+			s.writer.Flush()
+			continue
+		}
+
 		err := s.encoder.Write(out)
 		if err != nil {
 			s.encoder.Write(&resp.Error{Msg: fmt.Sprintf("ERR encoder failed to write a response: %s", err.Error())})
@@ -127,6 +137,10 @@ func (s *Session) executeCommand(cmd *commands.Command) resp.Value {
 		return s.handleDiscard(cmd)
 	}
 
+	if cmd.Name == commands.PSYNC && !s.serverCtx.IsReplica {
+		return s.handlePsync(cmd)
+	}
+
 	if s.transactions.IsActive(s.id) {
 		if err := s.transactions.Queue(s.id, cmd); err != nil {
 			return &resp.Error{Msg: err.Error()}
@@ -140,7 +154,37 @@ func (s *Session) executeCommand(cmd *commands.Command) resp.Value {
 		RemoteAddr: s.getRemoteAddr(),
 	}
 
-	return commands.Dispatch(s.serverContext, handlerContext)
+	return commands.Dispatch(s.serverCtx, handlerContext)
+}
+
+func (s *Session) handlePsync(_ *commands.Command) resp.Value {
+	_, ok := s.serverCtx.ReplicasRegistry.GetReplica(s.getRemoteAddr())
+	if !ok {
+		return &resp.Error{Msg: "ERR replica handshake failed"}
+	}
+
+	replId := s.serverCtx.ReplicationId
+	offset := 0
+
+	if err := s.encoder.Write(&resp.SimpleString{
+		Bytes: fmt.Appendf(nil, "%s %s %d", "FULLRESYNC", replId, offset),
+	}); err != nil {
+		return &resp.Error{
+			Msg: "ERR sending FULLRESYNC response to replica",
+		}
+	}
+
+	s.writer.Flush()
+
+	if _, err := fmt.Fprintf(s.writer, "$%d\r\n%s", len(emptyRDB), emptyRDB); err != nil {
+		logger.Error("failed to send RDB to replica", "error", err)
+		s.conn.Close()
+		return nil
+	}
+
+	s.writer.Flush()
+
+	return nil
 }
 
 func (s *Session) handleMulti(cmd *commands.Command) resp.Value {
@@ -150,7 +194,7 @@ func (s *Session) handleMulti(cmd *commands.Command) resp.Value {
 			RemoteAddr: s.getRemoteAddr(),
 		}
 
-		out := commands.Dispatch(s.serverContext, handlerContext)
+		out := commands.Dispatch(s.serverCtx, handlerContext)
 
 		switch out.(type) {
 		case *resp.Error:
@@ -174,7 +218,7 @@ func (s *Session) handleExec() resp.Value {
 			Cmd:        c,
 			RemoteAddr: s.getRemoteAddr(),
 		}
-		return commands.Dispatch(s.serverContext, handlerContext)
+		return commands.Dispatch(s.serverCtx, handlerContext)
 	})
 }
 
@@ -190,5 +234,5 @@ func (s *Session) handleDiscard(cmd *commands.Command) resp.Value {
 		RemoteAddr: s.getRemoteAddr(),
 	}
 
-	return commands.Dispatch(s.serverContext, handlerContext)
+	return commands.Dispatch(s.serverCtx, handlerContext)
 }

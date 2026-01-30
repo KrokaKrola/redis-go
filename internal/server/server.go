@@ -59,7 +59,8 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 	}
 
 	encoder := resp.NewEncoder(conn)
-	decoder := resp.NewDecoder(bufio.NewReader(conn))
+	reader := bufio.NewReader(conn)
+	decoder := resp.NewDecoder(reader)
 
 	pingMsg := &resp.Array{
 		Elements: []resp.Value{
@@ -138,7 +139,7 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 
 	psyncResponse, err := decoder.Read()
 	if err != nil {
-		return errors.Join(fmt.Errorf("error reading PSYNC response from replica %s", replicaOf), err)
+		return errors.Join(fmt.Errorf("error reading PSYNC response from master %s", replicaOf), err)
 	}
 
 	ss, ok := psyncResponse.(*resp.SimpleString)
@@ -150,6 +151,12 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 
 	if len(psyncParts) < 3 || !slices.Equal(psyncParts[0], []byte("FULLRESYNC")) {
 		return fmt.Errorf("ERR invalid response from master. Expected PSYNC response to contain at least 3 elements and FULLRESYNC")
+	}
+
+	// TODO: needs to be changed for real parsing later
+	_, err = reader.ReadString(byte('\n'))
+	if err != nil {
+		return fmt.Errorf("ERR invalid response from master. Expected rdb file after PSYNC")
 	}
 
 	return nil
