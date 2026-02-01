@@ -21,19 +21,20 @@ import (
 var emptyRDB []byte
 
 type Session struct {
-	conn         net.Conn
-	transactions *transactions.Transactions
-	id           string
-	decoder      *resp.Decoder
-	encoder      *resp.Encoder
-	writer       *bufio.Writer
-	reader       *bufio.Reader
-	serverCtx    *commands.ServerContext
+	conn                 net.Conn
+	transactions         *transactions.Transactions
+	id                   string
+	decoder              *resp.Decoder
+	encoder              *resp.Encoder
+	writer               *bufio.Writer
+	reader               *bufio.Reader
+	serverCtx            *commands.ServerContext
+	isReplicationSession bool
 }
 
 var nextClientId int64
 
-func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Transactions, isReplica bool, replicasRegistry *ReplicasRegistry, replicationId string) *Session {
+func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Transactions, isReplica bool, replicasRegistry *ReplicasRegistry, replicationId string, isReplicationSession bool) *Session {
 	id := fmt.Sprintf("%d-%s", atomic.AddInt64(&nextClientId, 1), conn.RemoteAddr().String())
 
 	reader := bufio.NewReader(conn)
@@ -42,13 +43,14 @@ func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Tr
 	encoder := resp.NewEncoder(writer)
 
 	return &Session{
-		conn:         conn,
-		transactions: transactions,
-		id:           id,
-		decoder:      decoder,
-		encoder:      encoder,
-		writer:       writer,
-		reader:       reader,
+		conn:                 conn,
+		transactions:         transactions,
+		id:                   id,
+		decoder:              decoder,
+		encoder:              encoder,
+		writer:               writer,
+		reader:               reader,
+		isReplicationSession: isReplicationSession,
 		serverCtx: &commands.ServerContext{
 			IsReplica:        isReplica,
 			ReplicasRegistry: replicasRegistry,
@@ -109,9 +111,20 @@ func (s *Session) Run() {
 
 		out := s.executeCommand(cmd)
 
+		logger.Debug("executeCommands result", slog.Any("out", out))
+
+		if cmd.Name == commands.SET_COMMAND && !s.serverCtx.IsReplica {
+			logger.Debug("replicas broadcasting", slog.Any("value", value))
+			s.serverCtx.ReplicasRegistry.BroadcastRespValue(value)
+		}
+
 		// no-op case, continue
 		if out == nil {
 			s.writer.Flush()
+			continue
+		}
+
+		if s.isReplicationSession {
 			continue
 		}
 
@@ -183,6 +196,12 @@ func (s *Session) handlePsync(_ *commands.Command) resp.Value {
 	}
 
 	s.writer.Flush()
+
+	if err := s.serverCtx.ReplicasRegistry.AddReplicaConnection(s.conn); err != nil {
+		logger.Error("failed to add replicas connection", "error", err)
+		s.conn.Close()
+		return nil
+	}
 
 	return nil
 }

@@ -1,14 +1,15 @@
 package server
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/signal"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -58,9 +59,7 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		return errors.Join(errors.New("error while trying to connect to the master server"), err)
 	}
 
-	encoder := resp.NewEncoder(conn)
-	reader := bufio.NewReader(conn)
-	decoder := resp.NewDecoder(reader)
+	session := NewSession(conn, r.store, r.transactions, r.isReplica, r.replicasRegistry, r.replicationId, true)
 
 	pingMsg := &resp.Array{
 		Elements: []resp.Value{
@@ -70,11 +69,13 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		},
 	}
 
-	if err = encoder.Write(pingMsg); err != nil {
+	if err = session.encoder.Write(pingMsg); err != nil {
 		return errors.Join(fmt.Errorf("error sending PING request to master %s from replica", replicaOf), err)
 	}
 
-	pingResponse, err := decoder.Read()
+	session.writer.Flush()
+
+	pingResponse, err := session.decoder.Read()
 	if err != nil {
 		return errors.Join(fmt.Errorf("error reading PING response from replica %s", replicaOf), err)
 	}
@@ -91,11 +92,13 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		},
 	}
 
-	if err = encoder.Write(replConfMsg); err != nil {
+	if err = session.encoder.Write(replConfMsg); err != nil {
 		return errors.Join(fmt.Errorf("error sending REPLCONF listening-port request to master %s from replica", replicaOf), err)
 	}
 
-	replConfListeningPortResponse, err := decoder.Read()
+	session.writer.Flush()
+
+	replConfListeningPortResponse, err := session.decoder.Read()
 	if err != nil {
 		return errors.Join(fmt.Errorf("error reading REPLCONF listening-port response from replica %s", replicaOf), err)
 	}
@@ -112,11 +115,13 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		},
 	}
 
-	if err = encoder.Write(replConfMsg); err != nil {
+	if err = session.encoder.Write(replConfMsg); err != nil {
 		return errors.Join(fmt.Errorf("error sending REPLCONF capa request to master %s from replica", replicaOf), err)
 	}
 
-	replConfCapaResponse, err := decoder.Read()
+	session.writer.Flush()
+
+	replConfCapaResponse, err := session.decoder.Read()
 	if err != nil {
 		return errors.Join(fmt.Errorf("error reading REPLCONF capa response from replica %s", replicaOf), err)
 	}
@@ -133,11 +138,13 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		},
 	}
 
-	if err = encoder.Write(psyncInitialMsg); err != nil {
+	if err = session.encoder.Write(psyncInitialMsg); err != nil {
 		return errors.Join(fmt.Errorf("error sending PSYNC to master %s from replica", replicaOf), err)
 	}
 
-	psyncResponse, err := decoder.Read()
+	session.writer.Flush()
+
+	psyncResponse, err := session.decoder.Read()
 	if err != nil {
 		return errors.Join(fmt.Errorf("error reading PSYNC response from master %s", replicaOf), err)
 	}
@@ -153,11 +160,26 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		return fmt.Errorf("ERR invalid response from master. Expected PSYNC response to contain at least 3 elements and FULLRESYNC")
 	}
 
-	// TODO: needs to be changed for real parsing later
-	_, err = reader.ReadString(byte('\n'))
+	s, err := session.reader.ReadString(byte('\n'))
 	if err != nil {
 		return fmt.Errorf("ERR invalid response from master. Expected rdb file after PSYNC")
 	}
+
+	s = strings.TrimLeft(s, "$")
+	s = strings.TrimRight(s, "\r\n")
+
+	rdbContentLen, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return fmt.Errorf("ERR invalid RDB content len")
+	}
+
+	rdbContent := make([]byte, rdbContentLen)
+
+	if _, err := io.ReadFull(session.reader, rdbContent); err != nil {
+		return fmt.Errorf("ERR while reading RDB content")
+	}
+
+	session.Run()
 
 	return nil
 }
@@ -228,6 +250,6 @@ func (r *RedisServer) handleConnection(conn net.Conn) {
 	r.wg.Add(1)
 	defer r.wg.Done()
 
-	session := NewSession(conn, r.store, r.transactions, r.isReplica, r.replicasRegistry, r.replicationId)
+	session := NewSession(conn, r.store, r.transactions, r.isReplica, r.replicasRegistry, r.replicationId, false)
 	session.Run()
 }
