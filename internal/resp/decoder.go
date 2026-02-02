@@ -1,17 +1,16 @@
 package resp
 
 import (
-	"bufio"
 	"bytes"
 	"fmt"
 	"strconv"
 )
 
 type Decoder struct {
-	r *bufio.Reader
+	r ByteReadReader
 }
 
-func NewDecoder(reader *bufio.Reader) *Decoder {
+func NewDecoder(reader ByteReadReader) *Decoder {
 	return &Decoder{
 		r: reader,
 	}

@@ -53,13 +53,11 @@ func handleReplconf(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.V
 			return &resp.Error{Msg: "ERR server is not a replica"}
 		}
 
-		offset := 0
-
 		return &resp.Array{
 			Elements: []resp.Value{
 				&resp.BulkString{Bytes: []byte(REPLCONF)},
 				&resp.BulkString{Bytes: []byte("ACK")},
-				&resp.BulkString{Bytes: []byte(strconv.Itoa(offset))},
+				&resp.BulkString{Bytes: []byte(strconv.Itoa(serverCtx.ReplicationOffset))},
 			},
 		}
 	default:

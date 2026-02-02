@@ -30,6 +30,7 @@ type Session struct {
 	reader               *bufio.Reader
 	serverCtx            *commands.ServerContext
 	isReplicationSession bool
+	countingReader       *resp.CountingReader
 }
 
 var nextClientId int64
@@ -39,7 +40,10 @@ func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Tr
 
 	reader := bufio.NewReader(conn)
 	writer := bufio.NewWriter(conn)
-	decoder := resp.NewDecoder(reader)
+	cr := &resp.CountingReader{
+		R: reader,
+	}
+	decoder := resp.NewDecoder(cr)
 	encoder := resp.NewEncoder(writer)
 
 	return &Session{
@@ -57,6 +61,7 @@ func NewSession(conn net.Conn, store *store.Store, transactions *transactions.Tr
 			Store:            store,
 			ReplicationId:    replicationId,
 		},
+		countingReader: cr,
 	}
 }
 
@@ -96,6 +101,12 @@ func (s *Session) Run() {
 	defer s.writer.Flush()
 
 	for {
+		offset := s.countingReader.Count
+
+		if s.isReplicationSession {
+			logger.Debug("read offset", "offset", offset)
+		}
+
 		value, derr := s.decoder.Read()
 
 		logger.Debug("decoder.Read result", slog.Any("value", value), slog.Any("derr", derr))
@@ -115,6 +126,10 @@ func (s *Session) Run() {
 		if perr != nil {
 			s.writeError(perr.Error())
 			continue
+		}
+
+		if s.isReplicationSession {
+			s.serverCtx.ReplicationOffset = offset
 		}
 
 		out := s.executeCommand(cmd)

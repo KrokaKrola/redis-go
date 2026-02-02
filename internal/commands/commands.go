@@ -87,10 +87,11 @@ func newCommandFromRespArray(arr *resp.Array) (*Command, error) {
 }
 
 type ServerContext struct {
-	IsReplica        bool
-	ReplicasRegistry replica.ReplicasRegistry
-	Store            *store.Store
-	ReplicationId    string
+	IsReplica         bool
+	ReplicasRegistry  replica.ReplicasRegistry
+	Store             *store.Store
+	ReplicationId     string
+	ReplicationOffset int
 }
 
 type HandlerContext struct {

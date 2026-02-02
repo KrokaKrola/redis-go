@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"os"
@@ -161,7 +160,7 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 		return fmt.Errorf("ERR invalid response from master. Expected PSYNC response to contain at least 3 elements and FULLRESYNC")
 	}
 
-	s, err := session.reader.ReadString(byte('\n'))
+	s, err := session.countingReader.ReadString(byte('\n'))
 	if err != nil {
 		return fmt.Errorf("ERR invalid response from master. Expected rdb file after PSYNC")
 	}
@@ -176,9 +175,11 @@ func (r *RedisServer) ConnectToMaster(replicaOf string, replicaPort int) error {
 
 	rdbContent := make([]byte, rdbContentLen)
 
-	if _, err := io.ReadFull(session.reader, rdbContent); err != nil {
+	if _, err := session.countingReader.Read(rdbContent); err != nil {
 		return fmt.Errorf("ERR while reading RDB content")
 	}
+
+	session.countingReader.Count = 0
 
 	session.Run()
 
