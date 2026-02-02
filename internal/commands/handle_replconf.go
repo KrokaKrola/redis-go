@@ -1,12 +1,12 @@
 package commands
 
-import "github.com/codecrafters-io/redis-starter-go/internal/resp"
+import (
+	"strconv"
+
+	"github.com/codecrafters-io/redis-starter-go/internal/resp"
+)
 
 func handleReplconf(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
-	if serverCtx.IsReplica {
-		return &resp.Error{Msg: "ERR attempt to REPLCONF on replica server"}
-	}
-
 	args := handlerCtx.Cmd.ArgsLen()
 
 	if args <= 1 {
@@ -17,6 +17,10 @@ func handleReplconf(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.V
 
 	if !ok {
 		return &resp.Error{Msg: "ERR invalid command structure for REPLCONF command"}
+	}
+
+	if serverCtx.IsReplica && typeLiteral != "GETACK" {
+		return &resp.Error{Msg: "ERR invalid type for REPLCONF on replica server"}
 	}
 
 	switch typeLiteral {
@@ -43,6 +47,20 @@ func handleReplconf(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.V
 
 		if err := serverCtx.ReplicasRegistry.AddCapabilities(handlerCtx.RemoteAddr, capasList); err != nil {
 			return &resp.Error{Msg: err.Error()}
+		}
+	case "GETACK":
+		if !serverCtx.IsReplica {
+			return &resp.Error{Msg: "ERR server is not a replica"}
+		}
+
+		offset := 0
+
+		return &resp.Array{
+			Elements: []resp.Value{
+				&resp.BulkString{Bytes: []byte(REPLCONF)},
+				&resp.BulkString{Bytes: []byte("ACK")},
+				&resp.BulkString{Bytes: []byte(strconv.Itoa(offset))},
+			},
 		}
 	default:
 		return &resp.Error{Msg: "ERR unknown REPLCONF command type"}

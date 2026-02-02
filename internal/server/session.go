@@ -65,7 +65,15 @@ func (s *Session) getRemoteAddr() string {
 }
 
 func (s *Session) handleDecoderError(err error) (stop bool) {
-	if errors.Is(err, io.EOF) {
+	// Stop on EOF or any network connection error (closed, reset, etc.)
+	if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+		s.transactions.Discard(s.id)
+		return true
+	}
+
+	// Also stop on any net.OpError (covers "use of closed network connection")
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
 		s.transactions.Discard(s.id)
 		return true
 	}
@@ -124,7 +132,7 @@ func (s *Session) Run() {
 			continue
 		}
 
-		if s.isReplicationSession {
+		if s.isReplicationSession && cmd.Name != commands.REPLCONF {
 			continue
 		}
 

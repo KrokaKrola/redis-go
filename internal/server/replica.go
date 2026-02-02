@@ -63,6 +63,9 @@ func (rr *ReplicasRegistry) GetReplica(addr string) (*replica.Replica, bool) {
 }
 
 func (rr *ReplicasRegistry) AddReplicaConnection(conn net.Conn) error {
+	rr.Lock()
+	defer rr.Unlock()
+
 	addr := conn.RemoteAddr().String()
 	replItem, ok := rr.registry[addr]
 
@@ -86,6 +89,28 @@ func (rr *ReplicasRegistry) BroadcastRespValue(value resp.Value) {
 			logger.Error("error while trying to broadcast resp value to", "address", v.Connection.RemoteAddr().String())
 			continue
 		}
-		writer.Flush()
+
+		err := writer.Flush()
+		if err != nil {
+			logger.Error("error while trying to flush resp value to", "address", v.Connection.RemoteAddr().String())
+			return
+		}
+	}
+}
+
+// CloseAllConnections closes all replica connections. Used during shutdown.
+func (rr *ReplicasRegistry) CloseAllConnections() {
+	rr.Lock()
+	defer rr.Unlock()
+
+	for addr, v := range rr.registry {
+		if v.Connection != nil {
+			logger.Debug("closing replica connection", slog.String("address", addr))
+
+			if err := v.Connection.Close(); err != nil {
+				logger.Error("error while closing replica connection", slog.String("address", addr))
+				return
+			}
+		}
 	}
 }

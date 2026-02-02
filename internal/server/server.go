@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
@@ -197,8 +198,8 @@ func (r *RedisServer) Listen() error {
 	r.listener = l
 
 	logger.Info("Started server",
-		"address", l.Addr(),
-		"port", r.port,
+		slog.String("address", l.Addr().String()),
+		slog.Int("port", r.port),
 	)
 
 	sigChan := make(chan os.Signal, 1)
@@ -210,7 +211,14 @@ func (r *RedisServer) Listen() error {
 	logger.Info("Shutdown signal received, stopping server...")
 
 	// Stop accepting new connections
-	l.Close()
+	err = l.Close()
+	if err != nil {
+		logger.Error("error closing listener", err.Error())
+		return err
+	}
+
+	// Close all replica connections to unblock their session goroutines
+	r.replicasRegistry.CloseAllConnections()
 
 	// Wait for active connections to finish (with timeout)
 	done := make(chan struct{})
