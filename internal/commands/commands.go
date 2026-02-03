@@ -92,6 +92,7 @@ type ServerContext struct {
 	Store             *store.Store
 	ReplicationId     string
 	ReplicationOffset int
+	MasterOffset      int // bytes sent to replicas (master-side tracking)
 }
 
 type HandlerContext struct {

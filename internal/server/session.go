@@ -139,6 +139,7 @@ func (s *Session) Run() {
 		if cmd.Name == commands.SET_COMMAND && !s.serverCtx.IsReplica {
 			logger.Debug("replicas broadcasting", slog.Any("value", value))
 			s.serverCtx.ReplicasRegistry.BroadcastRespValue(value)
+			s.serverCtx.MasterOffset += resp.Size(value)
 		}
 
 		// no-op case, continue

@@ -127,3 +127,17 @@ func (rr *ReplicasRegistry) CloseAllConnections() {
 		}
 	}
 }
+
+// UpdateAckOffset updates the acknowledged offset for a replica
+func (rr *ReplicasRegistry) UpdateAckOffset(addr string, offset int) error {
+	rr.Lock()
+	defer rr.Unlock()
+
+	replItem, ok := rr.registry[addr]
+	if !ok {
+		return fmt.Errorf("ERR replica is not found")
+	}
+
+	replItem.AckOffset = offset
+	return nil
+}

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/codecrafters-io/redis-starter-go/internal/logger"
-	"github.com/codecrafters-io/redis-starter-go/internal/replica"
 	"github.com/codecrafters-io/redis-starter-go/internal/resp"
 )
 
@@ -27,7 +26,6 @@ func handleWait(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value
 	}
 
 	timeoutDuration := time.Duration(timeout) * time.Millisecond
-	resChan := make(chan resp.Value)
 
 	replicas := serverCtx.ReplicasRegistry.GetAllReplicas()
 
@@ -35,52 +33,57 @@ func handleWait(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value
 		return &resp.Integer{Number: 0}
 	}
 
-	if serverCtx.ReplicationOffset == 0 {
+	if serverCtx.MasterOffset == 0 {
 		return &resp.Integer{Number: int64(len(replicas))}
 	}
 
-	for _, repl := range replicas {
-		go func(repl *replica.Replica) {
-			writer := bufio.NewWriter(repl.Connection)
-			reader := bufio.NewReader(repl.Connection)
-			encoder := resp.NewEncoder(writer)
-			decoder := resp.NewDecoder(reader)
-			replConfMsg := &resp.Array{
-				Elements: []resp.Value{
-					&resp.BulkString{Bytes: []byte("REPLCONF")},
-					&resp.BulkString{Bytes: []byte("GETACK")},
-					&resp.BulkString{Bytes: []byte("*")},
-				},
-			}
-			if err := encoder.Write(replConfMsg); err != nil {
-				logger.Error("ERR wrong writing replica configuration", "error", err)
-				return
-			}
+	masterOffset := serverCtx.MasterOffset
 
-			writer.Flush()
-
-			response, err := decoder.Read()
-			if err != nil {
-				return
-			}
-
-			resChan <- response
-		}(repl)
+	// Send REPLCONF GETACK * to all replicas
+	replConfMsg := &resp.Array{
+		Elements: []resp.Value{
+			&resp.BulkString{Bytes: []byte("REPLCONF")},
+			&resp.BulkString{Bytes: []byte("GETACK")},
+			&resp.BulkString{Bytes: []byte("*")},
+		},
 	}
 
-	count := 0
-	timer := time.After(timeoutDuration)
+	for _, repl := range replicas {
+		writer := bufio.NewWriter(repl.Connection)
+		encoder := resp.NewEncoder(writer)
+		if err := encoder.Write(replConfMsg); err != nil {
+			logger.Error("ERR writing GETACK to replica", "error", err)
+			continue
+		}
+		writer.Flush()
+	}
 
-	for {
-		select {
-		case <-resChan:
-			count++
-			if count >= numReplicas {
-				return &resp.Integer{Number: int64(count)}
+	// Poll for acknowledgments until timeout or enough replicas respond
+	deadline := time.Now().Add(timeoutDuration)
+	pollInterval := 10 * time.Millisecond
+
+	for time.Now().Before(deadline) {
+		count := 0
+		for _, repl := range replicas {
+			if repl.AckOffset >= masterOffset {
+				count++
 			}
+		}
 
-		case <-timer:
+		if count >= numReplicas {
 			return &resp.Integer{Number: int64(count)}
 		}
+
+		time.Sleep(pollInterval)
 	}
+
+	// Final count after timeout
+	count := 0
+	for _, repl := range replicas {
+		if repl.AckOffset >= masterOffset {
+			count++
+		}
+	}
+
+	return &resp.Integer{Number: int64(count)}
 }

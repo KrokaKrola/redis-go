@@ -60,6 +60,15 @@ func handleReplconf(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.V
 				&resp.BulkString{Bytes: []byte(strconv.Itoa(serverCtx.ReplicationOffset))},
 			},
 		}
+	case "ACK":
+		// ACK is sent by replicas in response to GETACK
+		// Store the offset in the replica registry
+		offset, ok := handlerCtx.Cmd.ArgInt(1)
+		if !ok {
+			return &resp.Error{Msg: "ERR invalid offset value"}
+		}
+		serverCtx.ReplicasRegistry.UpdateAckOffset(handlerCtx.RemoteAddr, offset)
+		return nil
 	default:
 		return &resp.Error{Msg: "ERR unknown REPLCONF command type"}
 	}

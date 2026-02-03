@@ -10,6 +10,7 @@ type Replica struct {
 	Port         int
 	Capabilities []string
 	Connection   net.Conn
+	AckOffset    int // last acknowledged offset from this replica
 }
 
 type ReplicasRegistry interface {
@@ -19,4 +20,5 @@ type ReplicasRegistry interface {
 	AddReplicaConnection(conn net.Conn) error
 	BroadcastRespValue(value resp.Value)
 	GetAllReplicas() []*Replica
+	UpdateAckOffset(addr string, offset int) error
 }
