@@ -35,6 +35,10 @@ func handleWait(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value
 		return &resp.Integer{Number: 0}
 	}
 
+	if serverCtx.ReplicationOffset == 0 {
+		return &resp.Integer{Number: int64(len(replicas))}
+	}
+
 	for _, repl := range replicas {
 		go func(repl *replica.Replica) {
 			writer := bufio.NewWriter(repl.Connection)

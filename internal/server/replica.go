@@ -21,7 +21,7 @@ func (rr *ReplicasRegistry) GetAllReplicas() []*replica.Replica {
 	rr.RLock()
 	defer rr.RUnlock()
 
-	replicas := make([]*replica.Replica, len(rr.registry), len(rr.registry))
+	replicas := make([]*replica.Replica, 0, len(rr.registry))
 
 	for _, r := range rr.registry {
 		replicas = append(replicas, r)
