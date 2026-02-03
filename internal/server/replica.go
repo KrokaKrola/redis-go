@@ -17,6 +17,19 @@ type ReplicasRegistry struct {
 	registry map[string]*replica.Replica
 }
 
+func (rr *ReplicasRegistry) GetAllReplicas() []*replica.Replica {
+	rr.RLock()
+	defer rr.RUnlock()
+
+	replicas := make([]*replica.Replica, len(rr.registry), len(rr.registry))
+
+	for _, r := range rr.registry {
+		replicas = append(replicas, r)
+	}
+
+	return replicas
+}
+
 func NewReplicasRegistry() *ReplicasRegistry {
 	return &ReplicasRegistry{
 		registry: make(map[string]*replica.Replica),

@@ -18,4 +18,5 @@ type ReplicasRegistry interface {
 	GetReplica(addr string) (*Replica, bool)
 	AddReplicaConnection(conn net.Conn) error
 	BroadcastRespValue(value resp.Value)
+	GetAllReplicas() []*Replica
 }

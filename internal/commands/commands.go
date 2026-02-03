@@ -121,6 +121,7 @@ var handlers = map[Name]handlerFn{
 	DISCARD_COMMAND: handleDiscard,
 	INFO_COMMAND:    handleInfo,
 	REPLCONF:        handleReplconf,
+	WAIT:            handleWait,
 }
 
 func Dispatch(serverCtx *ServerContext, handlerCtx *HandlerContext) resp.Value {
